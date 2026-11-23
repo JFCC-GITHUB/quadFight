@@ -1,5 +1,5 @@
 extends RefCounted
-## Tetromino data (SRS). Kinds: 0=I 1=O 2=T 3=S 4=Z 5=J 6=L
+## Four-block piece data with SRS-style rotation and wall kicks. Kinds: 0=I 1=O 2=T 3=S 4=Z 5=J 6=L
 
 const BASE := [
 	[Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],

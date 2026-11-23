@@ -1,6 +1,6 @@
 # QuadFight – project notes for Claude
 
-Godot 4.7 (GDScript, GL Compatibility) single-player falling-block puzzle (never use the word "Tetris" in names/UI: trademark). Web build is deployed to
+Godot 4.7 (GDScript, GL Compatibility) single-player falling-block puzzle (keep third-party game trademarks out of names, UI and code; the project is free, non-commercial and independent: see README). Web build is deployed to
 GitHub Pages by `.github/workflows/deploy-web.yml` (image `barichello/godot-ci:4.7.2`,
 single-threaded web export so no COOP/COEP headers are needed). Main test target: iOS Safari.
 
