@@ -1,4 +1,4 @@
-# TetrisFight
+# QuadFight
 
 Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支援鍵盤／手把／觸控。
 
@@ -23,7 +23,7 @@ Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支�
 ## 部署到 GitHub Pages（iOS 試玩）
 1. 合併到 `main`（workflow 只在 main 觸發，也可在 Actions 頁手動 Run workflow）
 2. Repo → Settings → Pages → Source 選 **GitHub Actions**
-3. 網址：`https://<帳號>.github.io/tetrisFight/`
+3. 網址：`https://<帳號>.github.io/quadfight/`
 4. iOS Safari 開啟後「分享 → 加入主畫面」可全螢幕遊玩，排行榜存在瀏覽器儲存空間。
 
 ## 結構
@@ -31,3 +31,8 @@ Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支�
 - `scripts/pieces.gd` 方塊與踢牆資料
 - `scripts/scores.gd` 排行榜（autoload）
 - `scripts/title.gd` / `leaderboard.gd` / `main.gd` 畫面與輸入設定
+
+## 授權
+- 程式碼與自製美術：MIT License，見 `LICENSE`
+- 第三方（Godot、字型等）：見 `THIRD_PARTY_NOTICES.md`
+- 「Tetris」為其權利人的註冊商標；本專案為獨立作品，與其無關聯
