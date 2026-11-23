@@ -9,7 +9,7 @@ The owner has pre-authorized merging. When a piece of work is finished and verif
 dev branch, open a PR into `main` and squash-merge it right away (no need to ask first).
 Never force-push. After merging, check that the "Deploy Web to GitHub Pages" run succeeded
 (`mcp__github__actions_list` / `get_job_logs`) and report the live URL
-`https://jfcc-github.github.io/quadfight/`. If CI fails, fix and merge again.
+`https://jfcc-github.github.io/quadFight/`. If CI fails, fix and merge again.
 
 ## Art: generate it with Python, don't hand-draw or download
 All visual assets are produced by `tools/gen_assets.py` (Pillow + numpy) into `assets/`.
