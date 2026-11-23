@@ -4,6 +4,13 @@ Godot 4.7 (GDScript, GL Compatibility) single-player Tetris. Web build is deploy
 GitHub Pages by `.github/workflows/deploy-web.yml` (image `barichello/godot-ci:4.7.2`,
 single-threaded web export so no COOP/COEP headers are needed). Main test target: iOS Safari.
 
+## Workflow: always merge
+The owner has pre-authorized merging. When a piece of work is finished and verified, push the
+dev branch, open a PR into `main` and squash-merge it right away (no need to ask first).
+Never force-push. After merging, check that the "Deploy Web to GitHub Pages" run succeeded
+(`mcp__github__actions_list` / `get_job_logs`) and report the live URL
+`https://jfcc-github.github.io/tetrisFight/`. If CI fails, fix and merge again.
+
 ## Art: generate it with Python, don't hand-draw or download
 All visual assets are produced by `tools/gen_assets.py` (Pillow + numpy) into `assets/`.
 When the UI needs new art (icons, blocks, backgrounds, logos, badges), **add a function to
