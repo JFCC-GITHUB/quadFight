@@ -11,7 +11,7 @@ const GARBAGE := 7  # board value of a garbage block
 
 const NAMES := ["Rookie", "Beginner", "Casual", "Regular", "Skilled",
 	"Advanced", "Expert", "Master", "Elite", "Boss"]
-const MISTAKE := [0.28, 0.22, 0.17, 0.13, 0.10, 0.07, 0.05, 0.03, 0.015, 0.0]
+const MISTAKE := [0.40, 0.33, 0.27, 0.22, 0.18, 0.14, 0.11, 0.08, 0.05, 0.03]
 const MAX_GRAVITY_LEVEL := 7  # VS mode: gravity stops speeding up here
 
 var level := 3
@@ -44,8 +44,8 @@ var rng := RandomNumberGenerator.new()
 static func params(lv: int) -> Dictionary:
 	var t := clampf(float(lv - 1) / 9.0, 0.0, 1.0)
 	return {
-		"think": lerpf(1.0, 0.15, pow(t, 0.8)),     # reaction time after a piece appears (s)
-		"act": lerpf(0.45, 0.09, pow(t, 0.8)),      # time per rotate / shift (s)
+		"think": lerpf(1.6, 0.35, pow(t, 0.8)),     # reaction time after a piece appears (s)
+		"act": lerpf(0.7, 0.16, pow(t, 0.8)),      # time per rotate / shift (s)
 		"mistake": MISTAKE[clampi(lv - 1, 0, 9)],   # chance to pick a bad placement
 	}
 
