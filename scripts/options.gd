@@ -243,7 +243,7 @@ func _slider(rect: Rect2, value: float) -> HSlider:
 
 func _build_controls() -> void:
 	_caption("TOUCH LAYOUT", 214)
-	_segment(242, ["CLASSIC", "THUMBS"], TouchLayout.LAYOUTS.find(Settings.layout),
+	_segment(242, ["GAMEPAD", "CLASSIC", "THUMBS"], TouchLayout.LAYOUTS.find(Settings.layout),
 		func(i): Settings.layout = TouchLayout.LAYOUTS[i])
 	_caption("HANDS  (move buttons on the left or right)", 318)
 	_segment(346, ["MOVE LEFT", "MOVE RIGHT"], 1 if Settings.swap_sides else 0,
@@ -276,5 +276,5 @@ func _draw_pad_preview() -> void:
 	for b in TouchLayout.buttons(Settings.layout, Settings.swap_sides):
 		var r: Rect2 = b["rect"]
 		var pr := Rect2(origin + (r.position - Vector2(0, 732)) * sc, r.size * sc)
-		draw_style_box(Style.button_box(b["scheme"], false, 10), pr.grow(-1))
+		draw_style_box(Style.button_box(b["scheme"], false, b["radius"] / 2), pr.grow(-1))
 		Style.draw_icon(self, b["icon"], pr.get_center(), 26.0)

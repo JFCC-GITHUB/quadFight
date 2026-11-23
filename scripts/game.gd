@@ -112,7 +112,7 @@ func _apply_settings() -> void:
 	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides)
 	_btn_styles.clear()
 	for b in touch_buttons:
-		_btn_styles[b["name"]] = [Style.button_box(b["scheme"], false, 20), Style.button_box(b["scheme"], true, 20)]
+		_btn_styles[b["name"]] = [Style.button_box(b["scheme"], false, b["radius"]), Style.button_box(b["scheme"], true, b["radius"])]
 	das = Settings.DAS[Settings.move_speed]
 	arr = Settings.ARR[Settings.move_speed]
 	touch_map.clear()
