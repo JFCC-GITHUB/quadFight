@@ -20,10 +20,10 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 			_b("move_left", "left", 33, 803, 105, 70, true, d, 0, 14),
 			_b("move_right", "right", 138, 803, 105, 70, true, d, 0, 14),
 			_b("soft_drop", "down", 103, 873, 70, 70, true, d, 0, 14),
-			_b("hard_drop", "drop", 364, 732, 76, 76, false, Style.BTN_SNES_X, 1, 38),
-			_b("hold", "hold", 276, 800, 76, 76, false, Style.BTN_SNES_Y, 1, 38),
-			_b("rotate_ccw", "rotate_ccw", 452, 800, 76, 76, false, Style.BTN_SNES_A, 1, 38),
-			_b("rotate_cw", "rotate", 364, 868, 76, 76, false, Style.BTN_SNES_B, 1, 38),
+			_b("hard_drop", "drop", 360, 732, 84, 84, false, Style.BTN_SNES_X, 1, 42),
+			_b("hold", "hold", 276, 796, 84, 84, false, Style.BTN_SNES_Y, 1, 42),
+			_b("rotate_ccw", "rotate_ccw", 444, 796, 84, 84, false, Style.BTN_SNES_A, 1, 42),
+			_b("rotate_cw", "rotate", 360, 860, 84, 84, false, Style.BTN_SNES_B, 1, 42),
 		]
 	elif layout == "thumbs":
 		list = [
