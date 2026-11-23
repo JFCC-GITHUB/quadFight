@@ -16,17 +16,17 @@ ASSETS = os.path.join(ROOT, "assets")
 FONT_DISPLAY = os.path.join(ASSETS, "fonts", "RussoOne-Regular.ttf")
 
 # Piece colours: I O T S Z J L  (keep in sync with scripts/style.gd)
-# Block colour themes, piece order: I O T S Z J L.  Written to assets/themes.json,
+# Block colour themes, piece order: I O T S Z J L, then the neutral VS-mode garbage block.  Written to assets/themes.json,
 # which scripts/style.gd reads at runtime (this file is the single source of truth).
 THEMES = [
     {"id": "candy", "name": "Candy",
-     "colors": ["ff6fae", "3de8b5", "ffc247", "4db8ff", "9a7bff", "ff7a4d", "b6e04a"]},
+     "colors": ["ff6fae", "3de8b5", "ffc247", "4db8ff", "9a7bff", "ff7a4d", "b6e04a", "8d94b3"]},
     {"id": "neon", "name": "Neon",
-     "colors": ["ff3df2", "39ff88", "fff23d", "3dbcff", "ff5a3d", "a05bff", "3dffe8"]},
+     "colors": ["ff3df2", "39ff88", "fff23d", "3dbcff", "ff5a3d", "a05bff", "3dffe8", "8a8fa8"]},
     {"id": "pastel", "name": "Pastel",
-     "colors": ["a8e6ff", "ffe29a", "d3b8ff", "b5f0b0", "ffaab5", "9fb4ff", "ffc79a"]},
+     "colors": ["a8e6ff", "ffe29a", "d3b8ff", "b5f0b0", "ffaab5", "9fb4ff", "ffc79a", "c4c8d8"]},
     {"id": "colorblind", "name": "Colorblind",  # Okabe-Ito palette
-     "colors": ["56b4e9", "f0e442", "cc79a7", "009e73", "d55e00", "0072b2", "e69f00"]},
+     "colors": ["56b4e9", "f0e442", "cc79a7", "009e73", "d55e00", "0072b2", "e69f00", "9a9a9a"]},
 ]
 
 BACKGROUNDS = [
@@ -329,6 +329,19 @@ def make_icons():
     ic.d.ellipse((*ic.p(0.5 - 0.31, 0.5 - 0.31), *ic.p(0.5 + 0.31, 0.5 + 0.31)), fill=255)
     ic.d.ellipse((*ic.p(0.5 - 0.14, 0.5 - 0.14), *ic.p(0.5 + 0.14, 0.5 + 0.14)), fill=0)
     ic.save("gear")
+
+    # Crossed swords (VS mode)
+    ic = Icon()
+    for sx in (1, -1):
+        a = (0.5 - sx * 0.3, 0.14)
+        b = (0.5 + sx * 0.3, 0.80)
+        ic.stroke([a, b], w=int(ic.S * 0.085))
+        # cross guard near the grip
+        gx, gy = 0.5 + sx * 0.19, 0.60
+        dx, dy = 0.10 * sx, 0.04
+        ic.stroke([(gx - dx, gy + dy * 0.2 - 0.05), (gx + dx, gy + dy * 0.2 + 0.05)], w=int(ic.S * 0.07))
+        ic.d.ellipse((*ic.p(b[0] - 0.045, b[1] - 0.03), *ic.p(b[0] + 0.045, b[1] + 0.06)), fill=255)
+    ic.save("swords")
 
 
 def make_knob(size=64, ss=4):

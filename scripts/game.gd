@@ -1,12 +1,13 @@
 extends Control
-## Single-player falling-block puzzle: SRS rotation, 7-bag, hold, ghost, DAS/ARR, lock delay,
-## plus line-clear / drop / lock animations and sound.
+## Falling-block puzzle: SRS rotation, 7-bag, hold, ghost, DAS/ARR, lock delay,
+## line-clear / drop / lock animations and sound. Also runs VS CPU mode (see `vs`).
 
 const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
 const TouchLayout := preload("res://scripts/touch_layout.gd")
 const OptionsScreen := preload("res://scripts/options.gd")
+const CpuPlayer := preload("res://scripts/cpu_player.gd")
 
 const COLS := 10
 const ROWS := 20
@@ -20,10 +21,23 @@ const PAUSE_RECT := Rect2(16, 24, 56, 56)
 const LOCK_DELAY := 0.5
 const MAX_LOCK_RESETS := 15
 const CLEAR_TIME := 0.38
+const VS_MAX_GRAVITY_LEVEL := 7
+const GARBAGE := 7
+const CPU_PANEL := Rect2(428, 316, 100, 268)
+const CPU_CELL := 9.0
 
 enum State { PLAYING, CLEARING, PAUSED, OVER }
 
 var main: Node
+
+# VS CPU mode: set by Main before the screen is added.
+var vs := false
+var cpu_level := 3
+var cpu: RefCounted
+var incoming := 0          # garbage blocks that will drop on the player
+var combo := 0
+var fall_fx := {}          # Vector2i(board cell) -> {t, dur}: landing animation of garbage blocks
+var projectiles: Array = []
 
 var board: Array = []
 var bag: Array = []
@@ -82,6 +96,9 @@ func _ready() -> void:
 	_apply_settings()
 	for r in ROWS:
 		board.append(_empty_row())
+	if vs:
+		cpu = CpuPlayer.new(cpu_level)
+		cpu.on_clear = _on_cpu_clear
 	_spawn()
 	Sfx.start_music()
 
@@ -127,7 +144,7 @@ func _input(event: InputEvent) -> void:
 		if entering_name:
 			_name_input(event)
 		elif event.is_action_pressed("confirm"):
-			main.show_game()
+			main.show_game(vs, cpu_level)
 		return
 	if event.is_action_pressed("pause"):
 		_toggle_pause()
@@ -205,6 +222,10 @@ func _process(delta: float) -> void:
 			clear_timer -= delta
 			if clear_timer <= 0.0:
 				_finish_clear()
+	if vs and (state == State.PLAYING or state == State.CLEARING):
+		cpu.step(delta)
+		if not cpu.alive:
+			_vs_end(true)
 	queue_redraw()
 
 
@@ -229,6 +250,13 @@ func _update_effects(delta: float) -> void:
 		p["vel"].y += 900.0 * delta
 		p["pos"] += p["vel"] * delta
 	particles = particles.filter(func(p): return p["life"] > 0.0)
+	for pr in projectiles:
+		pr["t"] += delta
+	projectiles = projectiles.filter(func(pr): return pr["t"] < pr["dur"])
+	for k in fall_fx.keys():
+		fall_fx[k]["t"] -= delta
+		if fall_fx[k]["t"] <= 0.0:
+			fall_fx.erase(k)
 
 
 func _update_horizontal(delta: float) -> void:
@@ -248,7 +276,8 @@ func _update_horizontal(delta: float) -> void:
 
 
 func gravity_interval() -> float:
-	return pow(0.8 - float(level - 1) * 0.007, float(level - 1))
+	var lv := mini(level, VS_MAX_GRAVITY_LEVEL) if vs else level
+	return pow(0.8 - float(lv - 1) * 0.007, float(lv - 1))
 
 
 func _current_interval() -> float:
@@ -401,6 +430,9 @@ func _lock(play_sound := true) -> void:
 	if topped_out:
 		_game_over()
 		return
+	combo = 0
+	if vs and not _apply_incoming():
+		return
 	_spawn()
 
 
@@ -408,7 +440,7 @@ func _begin_clear(rows: Array) -> void:
 	state = State.CLEARING
 	clear_rows = rows
 	clear_timer = CLEAR_TIME
-	var n := rows.size()
+	var n := mini(rows.size(), 4)
 	var table := [0, 100, 300, 500, 800]
 	score += table[n] * level
 	lines += n
@@ -427,6 +459,9 @@ func _begin_clear(rows: Array) -> void:
 				})
 	_popup(["", "SINGLE", "DOUBLE", "TRIPLE", "QUAD!"][n],
 		Color("ffd400") if n == 4 else Color.WHITE)
+	if vs:
+		combo += 1
+		_send_attack(_attack_power(n, combo), true, rows)
 	_shake(0.3 if n == 4 else 0.15, 7.0 if n == 4 else 3.0)
 	Sfx.play("clear%d" % n)
 
@@ -453,6 +488,116 @@ func _shake(duration: float, mag: float) -> void:
 	shake_dur = duration
 	shake_time = duration
 	shake_mag = mag
+
+
+# ---------------------------------------------------------------- VS mode
+
+## Garbage blocks sent for clearing `n` lines (random within a range, +1 per combo step), 1..10.
+func _attack_power(n: int, combo_count: int) -> int:
+	var ranges := {1: [1, 2], 2: [3, 4], 3: [5, 7], 4: [8, 10]}
+	var r: Array = ranges[clampi(n, 1, 4)]
+	var bonus := clampi(combo_count - 1, 0, 3)
+	return mini(randi_range(r[0], r[1]) + bonus, 10)
+
+
+## Attack power first cancels the sender's own pending garbage; the rest hits the opponent.
+func _send_attack(power: int, from_player: bool, rows: Array) -> void:
+	var cancelled := 0
+	if from_player:
+		cancelled = mini(incoming, power)
+		incoming -= cancelled
+	else:
+		cancelled = mini(cpu.incoming, power)
+		cpu.incoming -= cancelled
+	power -= cancelled
+	if cancelled > 0 and from_player:
+		_popup("BLOCKED %d" % cancelled, Style.CYAN)
+	if power <= 0:
+		return
+	if from_player:
+		cpu.incoming += power
+		_popup("ATTACK +%d" % power, Color("ff7a4d"))
+		var row_y: float = BOARD_POS.y + (float(rows[0]) + 0.5) * CELL if not rows.is_empty() else BOARD_POS.y + 300.0
+		_spawn_projectiles(power, Vector2(BOARD_POS.x + COLS * CELL * 0.5, row_y), _cpu_center())
+	else:
+		incoming += power
+		_popup("INCOMING +%d" % power, Color("ff4d6d"))
+		_spawn_projectiles(power, _cpu_center(), Vector2(BOARD_POS.x + COLS * CELL * 0.5, BOARD_POS.y + 10.0))
+	Sfx.play("attack")
+
+
+func _on_cpu_clear(n: int, combo_count: int) -> void:
+	_send_attack(_attack_power(n, combo_count), false, [])
+
+
+func _cpu_center() -> Vector2:
+	return Vector2(CPU_PANEL.position.x + 50.0, CPU_PANEL.position.y + 40.0 + CPU_CELL * ROWS * 0.5)
+
+
+func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
+	for i in count:
+		projectiles.append({"from": from + Vector2(randf_range(-30, 30), randf_range(-10, 10)),
+			"to": to + Vector2(randf_range(-6, 6), randf_range(-6, 6)),
+			"t": -0.04 * i, "dur": 0.55})
+
+
+## Drops the pending garbage onto random columns of the player's board.
+## Returns false if it overflowed the board (the player loses).
+func _apply_incoming() -> bool:
+	if incoming <= 0:
+		return true
+	var n := incoming
+	incoming = 0
+	for i in n:
+		var x := randi_range(0, COLS - 1)
+		var top := ROWS
+		for yy in ROWS:
+			if board[yy][x] != -1:
+				top = yy
+				break
+		if top - 1 < 0:
+			_game_over()
+			return false
+		board[top - 1][x] = GARBAGE
+		fall_fx[Vector2i(x, top - 1)] = {"t": 0.4, "dur": 0.4}
+	Sfx.play("hit")
+	_shake(0.25, 5.0)
+	_popup("-%d" % n, Color("ff4d6d"))
+	return true
+
+
+func _vs_end(won: bool) -> void:
+	if state == State.OVER:
+		return
+	state = State.OVER
+	touch_map.clear()
+	Sfx.stop_music()
+	Sfx.play("win" if won else "lose")
+	_shake(0.4, 6.0)
+	Settings.add_vs_result(cpu_level, won)
+	var rec: Array = Settings.record(cpu_level)
+	var has_next := won and cpu_level < 10
+	var card_h := 240.0 + 102.0 + (92.0 if has_next else 0.0) + 70.0 + 36.0
+	var c := _open_overlay(Rect2(50, (960.0 - card_h) * 0.5 - 40.0, 440, card_h))
+	UI.label(c, "YOU WIN!" if won else "YOU LOSE", Rect2(0, 26, 440, 70), 46,
+		Style.GOLD if won else Color("ff6f8e"), HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.label(c, "vs CPU  Lv %d  %s" % [cpu_level, CpuPlayer.NAMES[cpu_level - 1]], Rect2(0, 100, 440, 34), 20,
+		Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
+	UI.label(c, "YOU  %d lines      CPU  %d lines" % [lines, cpu.lines], Rect2(0, 140, 440, 36), 22, Style.TEXT)
+	UI.label(c, "Record at this level:  %d W  /  %d L" % [rec[0], rec[1]], Rect2(0, 180, 440, 32), 18,
+		Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
+	var y := 240.0
+	UI.button(c, "REMATCH", Rect2(40, y, 360, 88), func(): main.show_game(true, cpu_level), 30,
+		Style.BTN_PRIMARY, "retry")
+	y += 102.0
+	if has_next:
+		UI.button(c, "NEXT LEVEL  (Lv %d)" % (cpu_level + 1), Rect2(40, y, 360, 78), func():
+			Settings.vs_level = cpu_level + 1
+			Settings.save()
+			main.show_game(true, cpu_level + 1), 22, Style.BTN_ACCENT, "swords")
+		y += 92.0
+	UI.button(c, "LEVELS", Rect2(40, y, 170, 70), func(): main.show_vs_select(), 20, Style.BTN_GLASS, "swords")
+	UI.button(c, "MENU", Rect2(230, y, 170, 70), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
 
 
 # ---------------------------------------------------------------- pause / game over
@@ -484,6 +629,9 @@ func _open_options() -> void:
 
 
 func _game_over() -> void:
+	if vs:
+		_vs_end(false)
+		return
 	state = State.OVER
 	touch_map.clear()
 	Sfx.stop_music()
@@ -661,6 +809,7 @@ func _draw() -> void:
 		draw_set_transform(Vector2(randf_range(-m, m), randf_range(-m, m)))
 	_draw_board()
 	draw_set_transform(Vector2.ZERO)
+	_draw_projectiles()
 
 	_draw_touch_buttons()
 
@@ -675,10 +824,14 @@ func _draw_header() -> void:
 	Style.text(self, cap, Vector2(0, 42), "SCORE", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 88), str(int(round(display_score))), 40, Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
-	# Best
-	var best := maxi(Scores.best(), score)
-	Style.text(self, cap, Vector2(400, 42), "BEST", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
-	Style.text(self, Style.FONT_DISPLAY, Vector2(400, 74), str(best), 22, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+	if vs:
+		Style.text(self, cap, Vector2(400, 42), "VS CPU", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+		Style.text(self, Style.FONT_DISPLAY, Vector2(400, 74), "Lv %d" % cpu_level, 22, Style.CYAN,
+			HORIZONTAL_ALIGNMENT_RIGHT, 124)
+	else:
+		var best := maxi(Scores.best(), score)
+		Style.text(self, cap, Vector2(400, 42), "BEST", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+		Style.text(self, Style.FONT_DISPLAY, Vector2(400, 74), str(best), 22, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, 124)
 
 
 func _side_panel(rect: Rect2, title: String) -> void:
@@ -693,21 +846,57 @@ func _draw_side_panels() -> void:
 	if hold_kind >= 0:
 		Style.draw_piece_centered(self, Pieces.cells(hold_kind, 0), hold_kind,
 			hold_r.position + Vector2(COL_W * 0.5, 62), 18.0, 0.35 if hold_used else 1.0)
-	var stats := [["LEVEL", str(level), 226.0], ["LINES", str(lines), 322.0]]
+	var stats := [["LEVEL", str(level), 226.0, Style.TEXT], ["LINES", str(lines), 322.0, Style.TEXT]]
+	if vs:
+		var warn := incoming > 0
+		stats[0] = ["INCOMING", str(incoming), 226.0, Color("ff4d6d") if warn else Style.MUTED]
 	for st in stats:
 		var r := Rect2(LEFT_X, st[2], COL_W, 84)
 		_side_panel(r, st[0])
-		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(0, 68), st[1], 30, Style.TEXT,
+		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(0, 68), st[1], 30, st[3],
 			HORIZONTAL_ALIGNMENT_CENTER, COL_W)
 
-	var next_r := Rect2(RIGHT_X, BOARD_POS.y, COL_W, 300)
+	var next_r := Rect2(RIGHT_X, BOARD_POS.y, COL_W, 190 if vs else 300)
 	_side_panel(next_r, "NEXT")
 	var y := next_r.position.y + 76
-	for i in 3:
+	for i in (2 if vs else 3):
 		var cell := 20.0 if i == 0 else 16.0
 		Style.draw_piece_centered(self, Pieces.cells(queue[i], 0), queue[i],
 			Vector2(RIGHT_X + COL_W * 0.5, y), cell, 1.0 if i == 0 else 0.8)
 		y += 86.0 if i == 0 else 72.0
+	if vs:
+		_draw_cpu_panel()
+
+
+## Mini view of the computer's board (VS mode).
+func _draw_cpu_panel() -> void:
+	var r := CPU_PANEL
+	var cap := Style.caption_font()
+	draw_style_box(Style.panel_box(Style.PANEL, 16, Color(1, 0.45, 0.55, 0.35) if cpu.incoming > 0 else Style.PANEL_BORDER), r)
+	Style.text(self, cap, r.position + Vector2(0, 26), "CPU  LV %d" % cpu_level, 15, Style.MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	var o := r.position + Vector2(5, 40)
+	draw_rect(Rect2(o, Vector2(COLS, ROWS) * CPU_CELL), Color(0, 0, 0, 0.4))
+	for yy in ROWS:
+		for xx in COLS:
+			var v: int = cpu.board[yy][xx]
+			if v >= 0:
+				Style.draw_block(self, v, Rect2(o + Vector2(xx, yy) * CPU_CELL, Vector2(CPU_CELL, CPU_CELL)))
+	if cpu.alive:
+		for c in Pieces.cells(cpu.kind, cpu.rot):
+			var q: Vector2i = cpu.pos + c
+			if q.y >= 0:
+				Style.draw_block(self, cpu.kind, Rect2(o + Vector2(q) * CPU_CELL, Vector2(CPU_CELL, CPU_CELL)))
+	else:
+		draw_rect(Rect2(o, Vector2(COLS, ROWS) * CPU_CELL), Color(0, 0, 0, 0.55))
+		Style.text(self, Style.FONT_DISPLAY, o + Vector2(0, 100), "OUT", 22, Style.GOLD,
+			HORIZONTAL_ALIGNMENT_CENTER, COLS * CPU_CELL)
+	var by := o.y + ROWS * CPU_CELL + 20
+	Style.text(self, Style.FONT_BOLD, Vector2(r.position.x, by), "LINES %d" % cpu.lines, 14, Style.TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	var warn: bool = cpu.incoming > 0
+	Style.text(self, Style.FONT_BOLD, Vector2(r.position.x, by + 17), "INCOMING %d" % cpu.incoming, 14,
+		Color("ff4d6d") if warn else Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 
 
 func _draw_board() -> void:
@@ -717,6 +906,10 @@ func _draw_board() -> void:
 	var border := Color(1, 0.3, 0.4, 0.5 + 0.4 * pulse) if danger else Color(0.55, 0.65, 1, 0.35)
 	var glow := Color(1, 0.2, 0.35, 0.35) if danger else Color(0.2, 0.55, 1, 0.28)
 	draw_style_box(Style.panel_box(Color(0.02, 0.02, 0.08, 0.86), 12, border, glow, 22), board_rect.grow(6))
+	if vs and incoming > 0:  # warning gauge: how many garbage blocks are about to land
+		var h := minf(incoming, 10.0) / 10.0 * ROWS * CELL
+		var a := 0.65 + 0.3 * sin(time * 8.0)
+		draw_rect(Rect2(BOARD_POS.x - 13, BOARD_POS.y + ROWS * CELL - h, 6, h), Color(1, 0.3, 0.4, a))
 	for x in COLS:
 		if x % 2 == 0:
 			draw_rect(Rect2(BOARD_POS + Vector2(x * CELL, 0), Vector2(CELL, ROWS * CELL)), Color(1, 1, 1, 0.022))
@@ -730,7 +923,11 @@ func _draw_board() -> void:
 		for x in COLS:
 			var v: int = board[y][x]
 			if v >= 0:
-				Style.draw_block(self, v, _cell_rect(x, y), 1.0 - clear_progress if clearing else 1.0)
+				var cr := _cell_rect(x, y)
+				var fx = fall_fx.get(Vector2i(x, y))
+				if fx != null:
+					cr.position.y -= (y + 2.0) * CELL * (fx["t"] / fx["dur"])
+				Style.draw_block(self, v, cr, 1.0 - clear_progress if clearing else 1.0)
 		if clearing:
 			var flash := 0.5 + 0.5 * sin(clear_progress * TAU * 3.0)
 			var row_w := COLS * CELL * (1.0 - clear_progress * 0.7)
@@ -788,6 +985,18 @@ func _draw_board() -> void:
 		var grow := 1.0 + maxf(0.0, life - 0.85) * 2.0
 		Style.text(self, Style.FONT_DISPLAY, Vector2(BOARD_POS.x, 360 - rise + i * 54), p["text"],
 			int(42 * grow), c, HORIZONTAL_ALIGNMENT_CENTER, COLS * CELL, 10, Color(0.05, 0.02, 0.15, c.a))
+
+
+## Attack "bullets" flying between the boards.
+func _draw_projectiles() -> void:
+	for pr in projectiles:
+		if pr["t"] < 0.0:
+			continue
+		var k: float = pr["t"] / pr["dur"]
+		var e := k * k * (3.0 - 2.0 * k)
+		var p: Vector2 = pr["from"].lerp(pr["to"], e) + Vector2(0, -50.0 * sin(PI * k))
+		draw_rect(Rect2(p - Vector2(8, 8), Vector2(16, 16)), Color(1, 0.45, 0.3, 0.25))
+		Style.draw_block(self, GARBAGE, Rect2(p - Vector2(6, 6), Vector2(12, 12)), 1.0 - 0.3 * k)
 
 
 func _draw_touch_buttons() -> void:

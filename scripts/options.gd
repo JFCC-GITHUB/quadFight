@@ -153,28 +153,42 @@ func _build_colors() -> void:
 # ---------------------------------------------------------------- SOUND
 
 func _build_sound() -> void:
-	_audio_row("SOUND EFFECTS", 212, Settings.sound_on, Settings.sound_vol,
+	_audio_row("SOUND EFFECTS", 204, Settings.sound_on, Settings.sound_vol,
 		func(on): Sfx.set_sound(on),
 		func(v): Settings.sound_vol = v,
-		func(): Sfx.play("rotate"))
-	_audio_row("MUSIC", 376, Settings.music_on, Settings.music_vol,
+		func(): Sfx.play("clear2"))
+	_caption("EFFECT STYLE", 358)
+	_segment(384, ["ARCADE", "SOFT & RELAXED"], 1 if Settings.sfx_style == "soft" else 0,
+		func(i):
+			Settings.sfx_style = "soft" if i == 1 else "arcade"
+			Sfx.play("clear2"))
+	_audio_row("MUSIC", 462, Settings.music_on, Settings.music_vol,
 		func(on): Sfx.set_music(on),
 		func(v):
 			Settings.music_vol = v
 			Sfx.apply_volumes(),
 		func(): Sfx.preview_music(Settings.music_style))
-	_caption("MUSIC STYLE  (tap to preview)", 542)
-	var y := 572.0
-	for st in Style.music_styles():
-		var id: String = st["id"]
-		var card := _card(Rect2(32, y, 476, 58), Settings.music_style == id, func():
-			Settings.music_style = id
-			Sfx.preview_music(id))
-		UI.label(card, st["name"], Rect2(16, 0, 160, 58), 19, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT,
-			Style.FONT_DISPLAY)
-		UI.label(card, st["desc"], Rect2(178, 0, 290, 58), 16, Style.MUTED, HORIZONTAL_ALIGNMENT_LEFT,
-			Style.FONT_SEMI)
-		y += 64.0
+	_caption("MUSIC STYLE  (tap arrows to preview)", 620)
+	var styles := Style.music_styles()
+	var idx := 0
+	for i in styles.size():
+		if styles[i]["id"] == Settings.music_style:
+			idx = i
+	UI.icon_button(content, "left", Rect2(32, 648, 72, 72), func(): _cycle_music(-1, styles, idx))
+	UI.icon_button(content, "right", Rect2(436, 648, 72, 72), func(): _cycle_music(1, styles, idx))
+	UI.label(content, styles[idx]["name"], Rect2(112, 648, 316, 40), 22, Style.TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.label(content, styles[idx]["desc"], Rect2(112, 686, 316, 34), 16, Style.MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
+	UI.label(content, "%d / %d" % [idx + 1, styles.size()], Rect2(112, 726, 316, 28), 15, Style.CYAN,
+		HORIZONTAL_ALIGNMENT_CENTER, Style.caption_font())
+
+
+func _cycle_music(d: int, styles: Array, idx: int) -> void:
+	var i := (idx + d + styles.size()) % styles.size()
+	Settings.music_style = styles[i]["id"]
+	Sfx.preview_music(Settings.music_style)
+	_rebuild_soon()
 
 
 func _audio_row(title: String, y: float, on: bool, vol: float, on_toggle: Callable,

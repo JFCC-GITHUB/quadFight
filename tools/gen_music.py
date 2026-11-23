@@ -24,6 +24,7 @@ CHORDS = {  # name: (root pitch class, intervals)
     "E": (4, [0, 4, 7]), "Dm": (2, [0, 3, 7]), "Em": (4, [0, 3, 7]),
     "Cmaj7": (0, [0, 4, 7, 11]), "Am7": (9, [0, 3, 7, 10]), "Fmaj7": (5, [0, 4, 7, 11]),
     "Em7": (4, [0, 3, 7, 10]), "Dm7": (2, [0, 3, 7, 10]),
+    "G7": (7, [0, 4, 7, 10]), "E7": (4, [0, 4, 7, 10]),
 }
 
 
@@ -558,6 +559,170 @@ def make_calm():
     return song.render(reverb=0.3, rv_time=0.8)
 
 
+# ================================================================== RELAXED STYLES
+
+def lowpass(x, cutoff):
+    """Brick-wall low-pass in the frequency domain (gives the muffled lo-fi sound)."""
+    spec = np.fft.rfft(x)
+    freqs = np.fft.rfftfreq(len(x), 1.0 / SR)
+    spec *= 1.0 / (1.0 + (freqs / cutoff) ** 4)
+    return np.fft.irfft(spec, len(x))
+
+
+def rhodes(f, dur, level=1.0):
+    n = int((dur + 0.4) * SR)
+    t = tvec(n)
+    trem = 1 + 0.12 * np.sin(2 * np.pi * 4.2 * t)
+    x = np.sin(2 * np.pi * f * t) + 0.45 * np.sin(2 * np.pi * 2 * f * t) * np.exp(-t * 3)
+    x += 0.25 * np.sin(2 * np.pi * 3 * f * t) * np.exp(-t * 5) + 0.3 * np.sin(2 * np.pi * 7 * f * t) * np.exp(-t * 22)
+    return level * x * trem * np.exp(-t * 1.8) * env(n, 0.004, 0.3) * 0.26
+
+
+def nylon(f, dur, level=1.0):
+    """Plucked nylon-string guitar: harmonics that decay faster the higher they are."""
+    n = int((dur + 0.3) * SR)
+    t = tvec(n)
+    x = np.zeros(n)
+    for k in range(1, 9):
+        if f * k > SR * 0.45:
+            break
+        x += (1.0 / k ** 1.1) * np.sin(2 * np.pi * k * f * t) * np.exp(-t * (2.2 + 2.4 * k))
+    return level * x * env(n, 0.002, 0.15) * 0.5
+
+
+def flute(f, dur, level=1.0):
+    n = int((dur + 0.1) * SR)
+    t = tvec(n)
+    vib = 1 + 0.006 * np.sin(2 * np.pi * 5.2 * t) * np.clip((t - 0.2) / 0.3, 0, 1)
+    ph = 2 * np.pi * np.cumsum(f * vib) / SR
+    x = np.sin(ph) + 0.18 * np.sin(2 * ph) + 0.06 * np.sin(3 * ph)
+    x += 0.05 * np.random.uniform(-1, 1, n) * np.clip(1 - t / 0.12, 0, 1)  # breath
+    return level * x * env(n, 0.05, 0.1) * 0.3
+
+
+def upright(f, dur, level=1.0):
+    n = int((dur + 0.05) * SR)
+    t = tvec(n)
+    x = np.sin(2 * np.pi * f * t) + 0.5 * np.sin(2 * np.pi * 2 * f * t) * np.exp(-t * 6) + 0.2 * np.sin(2 * np.pi * 3 * f * t) * np.exp(-t * 10)
+    return level * x * np.exp(-t * 2.2) * env(n, 0.008, 0.06) * 0.55
+
+
+def bell(f, dur, level=1.0):
+    """Music-box / glockenspiel tine: slightly inharmonic partials with fast-decaying upper ones."""
+    n = int((dur + 0.5) * SR)
+    t = tvec(n)
+    x = np.sin(2 * np.pi * f * t) * np.exp(-t * 3.2)
+    x += 0.4 * np.sin(2 * np.pi * f * 2.76 * t) * np.exp(-t * 7)
+    x += 0.18 * np.sin(2 * np.pi * f * 5.4 * t) * np.exp(-t * 16)
+    return level * x * env(n, 0.002, 0.2) * 0.4
+
+
+def rim(level=1.0):
+    n = int(0.06 * SR)
+    t = tvec(n)
+    return level * (np.sin(2 * np.pi * 1750 * t) * np.exp(-t * 90) * 0.6 + np.random.uniform(-1, 1, n) * np.exp(-t * 160) * 0.3)
+
+
+def crackle(n, density=0.00035, level=0.05):
+    rng = np.random.default_rng(3)
+    x = rng.uniform(-1, 1, n) * 0.004
+    clicks = rng.random(n) < density
+    x[clicks] += rng.uniform(-1, 1, clicks.sum()) * level * rng.uniform(0.3, 1.0, clicks.sum())
+    return x
+
+
+LOFI_CHORDS = ["Dm7", "G7", "Cmaj7", "Am7", "Dm7", "G7", "Cmaj7", "Cmaj7",
+               "Fmaj7", "Em7", "Dm7", "G7", "Cmaj7", "Am7", "Dm7", "G7"]
+LOFI_LEAD = [
+    "r:4 E5:4 D5:2 C5:2 A4:4", "B4:6 D5:2 G5:4 r:4", "E5:8 G5:4 E5:4", "C5:4 r:2 A4:2 G4:4 r:4",
+    "r:4 F5:4 E5:2 D5:2 A4:4", "B4:4 D5:4 F5:6 r:2", "E5:6 D5:2 C5:4 G4:4", "C5:12 r:4",
+    "A4:4 C5:4 E5:8", "G4:4 B4:4 D5:8", "F5:6 E5:2 D5:4 A4:4", "G4:2 B4:2 D5:4 F5:4 r:4",
+    "E5:4 G5:4 E5:4 D5:4", "C5:6 A4:2 E5:8", "F5:4 D5:4 A4:8", "B4:4 D5:4 G5:8",
+]
+
+
+def make_lofi():
+    song = Song(76, 16, tail=3.5)
+    melody_voice(song, parse(LOFI_LEAD), lambda f, d: rhodes(f, d, 0.9), 1.0, 0.15, legato=1.0)
+    for bar in range(16):
+        name, b = LOFI_CHORDS[bar], bar * 16
+        root = root_midi(name, 2)
+        for i, m in enumerate(chord(name, 3)):  # rolled, laid-back comping
+            song.add(b + i * 0.5, rhodes(hz(m), song.dur(6), 0.5), 1.0, -0.25)
+            song.add(b + 10 + i * 0.5, rhodes(hz(m), song.dur(4), 0.38), 1.0, -0.25)
+        song.add(b, upright(hz(root), song.dur(7)), 1.0)
+        song.add(b + 8, upright(hz(root + 7), song.dur(5)), 0.8)
+        song.add(b + 12, upright(hz(root + (12 if bar % 2 else 7)), song.dur(3)), 0.6)
+        for s in (0, 10):
+            song.add(b + s, kick(0.7, 48, 0.3))
+        if bar % 2:
+            song.add(b + 7, kick(0.45, 48, 0.25))
+        for s in (4, 12):
+            song.add(b + s, snare(0.42, 170, 0.24, 1.1))
+        for s in range(0, 16, 2):
+            song.add(b + s + (0.35 if s % 4 else 0.0), hat(0.35, 0.04, 80), 0.6 if s % 4 else 0.85)
+    song.add(0, crackle(song.n), 1.0)
+    out = song.render(reverb=0.22, rv_time=0.55)
+    # muffled, tape-like top end
+    for c in range(2):
+        out[:, c] = lowpass(out[:, c], 3800)
+    return (out / np.abs(out).max() * 0.7).astype(np.float32)
+
+
+BOSSA_CHORDS = ["Am7", "Dm7", "G7", "Cmaj7", "Fmaj7", "Dm7", "E7", "Am7"] * 2
+BOSSA_LEAD = [
+    "r:2 E5:4 C5:2 E5:4 D5:4", "F5:6 E5:2 D5:8", "B4:4 D5:4 G5:8", "E5:6 G5:2 E5:4 r:4",
+    "A5:6 G5:2 F5:4 C5:4", "D5:4 F5:4 A5:4 F5:4", "G#5:6 B5:2 E5:8", "A5:12 r:4",
+    "r:2 C6:4 A5:2 E5:4 C5:4", "D5:6 F5:2 A5:8", "G5:4 F5:4 D5:4 B4:4", "C5:8 E5:4 G5:4",
+    "F5:6 A5:2 C6:8", "A5:4 F5:4 D5:8", "B4:4 D5:4 G#4:4 B4:4", "A4:8 E5:4 A4:4",
+]
+
+
+def make_bossa():
+    song = Song(116, 16, tail=3.0)
+    melody_voice(song, parse(BOSSA_LEAD), lambda f, d: flute(f, d, 0.9), 1.0, 0.2, legato=0.95)
+    for bar in range(16):
+        name, b = BOSSA_CHORDS[bar], bar * 16
+        root = root_midi(name, 2)
+        voic = chord(name, 3)
+        for s in (0, 3, 6, 10, 13):  # bossa comping rhythm
+            for i, m in enumerate(voic):
+                song.add(b + s + i * 0.18, nylon(hz(m), song.dur(2.5), 0.55), 1.0, -0.3)
+        for s, off in ((0, 0), (6, 7), (8, 0), (14, 7)):
+            song.add(b + s, upright(hz(root + off), song.dur(4.5)), 0.85 if off else 1.0)
+        for s in (0, 3, 6, 10, 13):  # clave on the rim
+            song.add(b + s, rim(0.6), 1.0, 0.3)
+        song.add(b, kick(0.5, 52, 0.25))
+        song.add(b + 8, kick(0.4, 52, 0.25))
+        for s in range(0, 16, 2):
+            song.add(b + s, hat(0.3, 0.035, 110), 0.55)
+    return song.render(reverb=0.18, rv_time=0.4)
+
+
+BOX_CHORDS = ["C", "G", "Am", "F", "C", "G", "F", "C", "Am", "F", "C", "G", "Am", "F", "G", "C"]
+BOX_LEAD = [
+    "E5:4 G5:4 C6:8", "D6:4 B5:4 G5:8", "C6:4 E6:4 A5:8", "A5:4 F5:4 C6:8",
+    "G5:4 E5:4 C5:8", "B4:4 D5:4 G5:8", "A5:6 G5:2 F5:8", "E5:8 C5:8",
+    "A5:8 E5:4 C5:4", "C6:6 A5:2 F5:8", "E6:4 C6:4 G5:8", "D6:6 B5:2 G5:8",
+    "C6:4 B5:4 A5:8", "A5:4 C6:4 F6:8", "D6:4 B5:4 G5:8", "C6:8 G5:4 E5:4",
+]
+
+
+def make_musicbox():
+    song = Song(90, 16, tail=3.5)
+    melody_voice(song, parse(BOX_LEAD), lambda f, d: bell(f, d, 1.0), 1.0, 0.2, legato=1.0)
+    for bar in range(16):
+        name, b = BOX_CHORDS[bar], bar * 16
+        notes = chord(name, 4)
+        arp = [notes[0], notes[1], notes[2], notes[1], notes[0] + 12, notes[2], notes[1], notes[2]]
+        for i, m in enumerate(arp):  # gentle 8th-note arpeggio underneath
+            song.add(b + i * 2, bell(hz(m - 12), song.dur(2), 0.35), 1.0, -0.3 if i % 2 else 0.0)
+        song.add(b, soft_pad([hz(m) for m in chord(name, 3)], song.dur(16)), 1.0, 0.0)
+        song.add(b, tri_note(hz(root_midi(name, 2)), song.dur(8), 0.8), 1.0)
+        song.add(b + 8, tri_note(hz(root_midi(name, 2) + 7), song.dur(8), 0.6), 1.0)
+    return song.render(reverb=0.3, rv_time=0.9)
+
+
 # ================================================================== main
 
 STYLES = [
@@ -565,7 +730,25 @@ STYLES = [
     {"id": "chip", "name": "Chiptune", "desc": "Bouncy 8-bit adventure", "fn": make_chip},
     {"id": "synth", "name": "Synthwave", "desc": "Neon 80s night drive", "fn": make_synth},
     {"id": "calm", "name": "Chill", "desc": "Soft and relaxed", "fn": make_calm},
+    {"id": "lofi", "name": "Lo-fi Cafe", "desc": "Cozy lo-fi beats, relaxed", "fn": make_lofi},
+    {"id": "bossa", "name": "Bossa Breeze", "desc": "Light bossa nova guitar, relaxed", "fn": make_bossa},
+    {"id": "musicbox", "name": "Music Box", "desc": "Gentle bells, lullaby, relaxed", "fn": make_musicbox},
 ]
+
+
+def write_ogg(path, audio):
+    """Encode to Ogg Vorbis. ffmpeg is preferred (libsndfile's encoder segfaults on some signals)."""
+    import shutil
+    import subprocess
+    import tempfile
+    if shutil.which("ffmpeg"):
+        with tempfile.TemporaryDirectory() as d:
+            wav = os.path.join(d, "x.wav")
+            sf.write(wav, audio, SR, subtype="PCM_16")
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis",
+                            "-q:a", "3", path], check=True)
+    else:
+        sf.write(path, audio, SR, format="OGG", subtype="VORBIS")
 
 
 def main(only=None):
@@ -576,7 +759,7 @@ def main(only=None):
             continue
         audio = s["fn"]()
         path = os.path.join(OUT, s["id"] + ".ogg")
-        sf.write(path, audio, SR, format="OGG", subtype="VORBIS")
+        write_ogg(path, audio)
         print(f"{s['id']:6s} {len(audio) / SR:5.1f}s  {os.path.getsize(path) / 1024:6.0f} KB")
     with open(os.path.join(OUT, "styles.json"), "w") as f:
         json.dump({"styles": [{k: v for k, v in s.items() if k != "fn"} for s in STYLES]}, f, indent=1)

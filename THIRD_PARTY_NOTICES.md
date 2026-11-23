@@ -20,7 +20,7 @@ OFL 1.1: https://openfontlicense.org
 
 ## Music and sound
 All music is original, composed and synthesized for this project with `tools/gen_music.py`
-(styles: Super Robot, Chiptune, Synthwave, Chill) and is covered by the project's MIT License.
+(styles: Super Robot, Chiptune, Synthwave, Chill, Lo-fi Cafe, Bossa Breeze, Music Box) and is covered by the project's MIT License.
 The Super Robot style is an homage to the general sound of 1970s-80s Japanese "super robot" anime
 themes (heroic minor-key brass, rock drums); it does not reproduce any existing song.
 Sound effects are generated in code (`scripts/sfx.gd`). No third-party audio is bundled.

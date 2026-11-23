@@ -19,6 +19,21 @@
    "id": "calm",
    "name": "Chill",
    "desc": "Soft and relaxed"
+  },
+  {
+   "id": "lofi",
+   "name": "Lo-fi Cafe",
+   "desc": "Cozy lo-fi beats, relaxed"
+  },
+  {
+   "id": "bossa",
+   "name": "Bossa Breeze",
+   "desc": "Light bossa nova guitar, relaxed"
+  },
+  {
+   "id": "musicbox",
+   "name": "Music Box",
+   "desc": "Gentle bells, lullaby, relaxed"
   }
  ]
 }
