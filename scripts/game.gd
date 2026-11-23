@@ -1,5 +1,5 @@
 extends Control
-## Single-player Tetris: SRS rotation, 7-bag, hold, ghost, DAS/ARR, lock delay,
+## Single-player falling-block puzzle: SRS rotation, 7-bag, hold, ghost, DAS/ARR, lock delay,
 ## plus line-clear / drop / lock animations and sound.
 
 const UI := preload("res://scripts/ui.gd")
@@ -418,7 +418,7 @@ func _begin_clear(rows: Array) -> void:
 					"life": randf_range(0.4, 0.8), "max": 0.8,
 					"color": Pieces.COLORS[board[y][x]], "size": randf_range(3, 7),
 				})
-	_popup(["", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS!"][n],
+	_popup(["", "SINGLE", "DOUBLE", "TRIPLE", "QUAD!"][n],
 		Color("ffd400") if n == 4 else Color.WHITE)
 	_shake(0.3 if n == 4 else 0.15, 7.0 if n == 4 else 3.0)
 	Sfx.play("clear%d" % n)

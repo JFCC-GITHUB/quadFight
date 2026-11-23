@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate TetrisFight art assets (blocks, background, logo, icons).
+"""Generate QuadFight art assets (blocks, background, logo, icons).
 
 Usage:  python3 tools/gen_assets.py      (needs Pillow + numpy)
 Outputs into assets/. Re-run after tweaking colours/shapes here.
@@ -169,7 +169,7 @@ def logo_word(text, size, stops, glow_col):
 
 
 def make_logo():
-    top = logo_word("TETRIS", 230, [(0, (255, 255, 255)), (0.5, (150, 240, 255)), (1, (40, 170, 255))], (40, 200, 255))
+    top = logo_word("QUAD", 230, [(0, (255, 255, 255)), (0.5, (150, 240, 255)), (1, (40, 170, 255))], (40, 200, 255))
     bot = logo_word("FIGHT", 230, [(0, (255, 235, 120)), (0.5, (255, 120, 120)), (1, (255, 50, 170))], (255, 60, 170))
     w = max(top.width, bot.width)
     overlap = int(top.height * 0.42)
