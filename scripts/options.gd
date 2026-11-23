@@ -25,6 +25,8 @@ func _ready() -> void:
 
 
 func _close() -> void:
+	Sfx.stop_preview()
+	Sfx.refresh_music_style()
 	Settings.save()
 	on_close.call()
 	queue_free()
@@ -151,34 +153,43 @@ func _build_colors() -> void:
 # ---------------------------------------------------------------- SOUND
 
 func _build_sound() -> void:
-	_audio_row("SOUND EFFECTS", 224, Settings.sound_on, Settings.sound_vol,
+	_audio_row("SOUND EFFECTS", 212, Settings.sound_on, Settings.sound_vol,
 		func(on): Sfx.set_sound(on),
-		func(v):
-			Settings.sound_vol = v,
+		func(v): Settings.sound_vol = v,
 		func(): Sfx.play("rotate"))
-	_audio_row("MUSIC", 424, Settings.music_on, Settings.music_vol,
+	_audio_row("MUSIC", 376, Settings.music_on, Settings.music_vol,
 		func(on): Sfx.set_music(on),
 		func(v):
 			Settings.music_vol = v
 			Sfx.apply_volumes(),
-		func(): pass)
-	UI.label(content, "Sounds are generated in the game, no audio files.", Rect2(32, 640, 476, 30), 16,
-		Style.MUTED)
+		func(): Sfx.preview_music(Settings.music_style))
+	_caption("MUSIC STYLE  (tap to preview)", 542)
+	var y := 572.0
+	for st in Style.music_styles():
+		var id: String = st["id"]
+		var card := _card(Rect2(32, y, 476, 58), Settings.music_style == id, func():
+			Settings.music_style = id
+			Sfx.preview_music(id))
+		UI.label(card, st["name"], Rect2(16, 0, 160, 58), 19, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT,
+			Style.FONT_DISPLAY)
+		UI.label(card, st["desc"], Rect2(178, 0, 290, 58), 16, Style.MUTED, HORIZONTAL_ALIGNMENT_LEFT,
+			Style.FONT_SEMI)
+		y += 64.0
 
 
 func _audio_row(title: String, y: float, on: bool, vol: float, on_toggle: Callable,
 		on_volume: Callable, on_release: Callable) -> void:
-	UI.label(content, title, Rect2(32, y, 300, 60), 24, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT,
+	UI.label(content, title, Rect2(32, y, 300, 56), 24, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT,
 		Style.FONT_DISPLAY)
-	UI.button(content, "ON" if on else "OFF", Rect2(388, y, 120, 60),
+	UI.button(content, "ON" if on else "OFF", Rect2(388, y, 120, 56),
 		func():
 			on_toggle.call(not on)
 			_rebuild_soon(), 22, Style.BTN_PRIMARY if on else Style.BTN_GLASS)
-	var pct := UI.label(content, "%d%%" % roundi(vol * 100.0), Rect2(408, y + 84, 100, 40), 24,
-		Style.CYAN, HORIZONTAL_ALIGNMENT_RIGHT, Style.FONT_DISPLAY)
-	UI.label(content, "VOLUME", Rect2(32, y + 84, 200, 40), 16, Style.MUTED, HORIZONTAL_ALIGNMENT_LEFT,
+	UI.label(content, "VOLUME", Rect2(32, y + 66, 200, 32), 16, Style.MUTED, HORIZONTAL_ALIGNMENT_LEFT,
 		Style.caption_font())
-	var s := _slider(Rect2(32, y + 130, 476, 48), vol)
+	var pct := UI.label(content, "%d%%" % roundi(vol * 100.0), Rect2(408, y + 66, 100, 32), 22,
+		Style.CYAN, HORIZONTAL_ALIGNMENT_RIGHT, Style.FONT_DISPLAY)
+	var s := _slider(Rect2(32, y + 100, 476, 48), vol)
 	s.modulate.a = 1.0 if on else 0.5
 	s.value_changed.connect(func(v):
 		on_volume.call(v)

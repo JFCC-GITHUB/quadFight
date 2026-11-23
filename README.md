@@ -21,7 +21,7 @@ Godot 4.7 單人落塊益智遊戲。起始畫面、分數、本機排行榜，�
 
 ## 選項（標題畫面或暫停選單 → OPTIONS）
 - **COLORS**：方塊配色 4 種（Candy / Neon / Pastel / Colorblind）、背景 3 種（Nebula / Midnight / Sunset）
-- **SOUND**：音效、音樂各自的開關與音量
+- **SOUND**：音效、音樂各自的開關與音量；音樂風格 4 種（Super Robot 熱血機器人動畫風〔預設〕/ Chiptune / Synthwave / Chill），點選即可試聽
 - **CONTROLS**：觸控版型（Classic / Thumbs，後者多一顆逆時針旋轉）、移動按鈕放左手或右手、長按移動速度、落點預覽開關，附即時預覽
 - 設定會存在瀏覽器儲存空間，下次開啟自動套用
 
@@ -29,6 +29,11 @@ Godot 4.7 單人落塊益智遊戲。起始畫面、分數、本機排行榜，�
 - `tools/gen_assets.py` 用 Python（Pillow + numpy）生成方塊材質、背景、Logo、按鈕圖示，輸出到 `assets/`。改顏色或形狀後重跑：`python3 tools/gen_assets.py`
 - 字型：Russo One、Rajdhani（Google Fonts，SIL Open Font License，授權檔在 `assets/fonts/`）
 - 介面配色與繪圖輔助集中在 `scripts/style.gd`
+
+## 音樂
+音樂全部是原創曲，由 `tools/gen_music.py` 用 Python（numpy + soundfile）合成並輸出成可無縫循環的 OGG 到 `assets/music/`。
+想改曲或加新風格：編輯該腳本裡的樂譜／風格函式，執行 `python3 tools/gen_music.py`。
+Super Robot 風格只是參考 70–80 年代日本超級機器人動畫主題曲的整體氛圍（熱血銅管、搖滾鼓組），沒有重現任何現有歌曲。
 
 ## 本機開發
 用 Godot 4.7 開啟專案資料夾，按 F5。

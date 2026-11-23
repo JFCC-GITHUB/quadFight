@@ -10,6 +10,7 @@ var sound_on := true
 var music_on := true
 var sound_vol := 0.8
 var music_vol := 0.7
+var music_style := "robot"  # see assets/music/styles.json
 # Look
 var theme := "candy"
 var background := "nebula"
@@ -28,6 +29,7 @@ func _ready() -> void:
 	music_on = cfg.get_value("audio", "music", music_on)
 	sound_vol = clampf(cfg.get_value("audio", "sound_vol", sound_vol), 0.0, 1.0)
 	music_vol = clampf(cfg.get_value("audio", "music_vol", music_vol), 0.0, 1.0)
+	music_style = cfg.get_value("audio", "music_style", music_style)
 	theme = cfg.get_value("look", "theme", theme)
 	background = cfg.get_value("look", "background", background)
 	layout = cfg.get_value("controls", "layout", layout)
@@ -42,6 +44,7 @@ func save() -> void:
 	cfg.set_value("audio", "music", music_on)
 	cfg.set_value("audio", "sound_vol", sound_vol)
 	cfg.set_value("audio", "music_vol", music_vol)
+	cfg.set_value("audio", "music_style", music_style)
 	cfg.set_value("look", "theme", theme)
 	cfg.set_value("look", "background", background)
 	cfg.set_value("controls", "layout", layout)

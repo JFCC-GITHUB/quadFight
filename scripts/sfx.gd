@@ -1,6 +1,7 @@
 extends Node
-## Procedurally synthesized sound effects + chiptune music (no audio assets).
-## Autoload "Sfx". On/off and volumes live in the Settings autoload.
+## Sound effects are synthesized in code; background music is rendered to OGG loops by
+## tools/gen_music.py (styles listed in assets/music/styles.json).
+## Autoload "Sfx". On/off, volumes and the music style live in the Settings autoload.
 
 const RATE := 22050
 const MRATE := 11025
@@ -8,7 +9,9 @@ const MRATE := 11025
 var _streams := {}
 var _players: Array = []
 var _music: AudioStreamPlayer
-var _music_ready := false
+var _music_style := ""
+var _preview: AudioStreamPlayer
+var _preview_token := 0
 var _music_wanted := false
 
 
@@ -20,11 +23,10 @@ func _ready() -> void:
 		_players.append(p)
 	_music = AudioStreamPlayer.new()
 	add_child(_music)
+	_preview = AudioStreamPlayer.new()
+	add_child(_preview)
 	apply_volumes()
 	_build_sfx()
-	# Music takes a moment to synthesize; do it after the first frames.
-	await get_tree().create_timer(0.4).timeout
-	_build_music()
 
 
 # ---------------------------------------------------------------- public API
@@ -44,8 +46,53 @@ func play(sound: String) -> void:
 
 func start_music() -> void:
 	_music_wanted = true
-	if Settings.music_on and _music_ready and not _music.playing:
+	if not Settings.music_on:
+		return
+	_ensure_style()
+	if not _music.playing:
 		_music.play()
+
+
+## Loads the OGG for the selected style (looping) into the music player if needed.
+func _ensure_style() -> void:
+	if _music_style == Settings.music_style and _music.stream != null:
+		return
+	_music.stream = _load_style(Settings.music_style)
+	_music_style = Settings.music_style
+
+
+func _load_style(id: String) -> AudioStream:
+	var st = load("res://assets/music/%s.ogg" % id)
+	if st == null:
+		st = load("res://assets/music/robot.ogg")
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	return st
+
+
+## Call after the style option changed: swaps the track if music is supposed to be playing.
+func refresh_music_style() -> void:
+	if _music_wanted and Settings.music_on:
+		_music.stream = _load_style(Settings.music_style)
+		_music_style = Settings.music_style
+		_music.play()
+
+
+## Plays the first seconds of a style (used by the options screen).
+func preview_music(id: String) -> void:
+	_preview_token += 1
+	var token := _preview_token
+	_preview.stream = _load_style(id)
+	_preview.volume_db = -15.0 + linear_to_db(maxf(Settings.music_vol, 0.0001))
+	_preview.play()
+	await get_tree().create_timer(9.0).timeout
+	if token == _preview_token:
+		_preview.stop()
+
+
+func stop_preview() -> void:
+	_preview_token += 1
+	_preview.stop()
 
 
 func stop_music() -> void:
@@ -58,7 +105,9 @@ func pause_music(paused: bool) -> void:
 
 
 func apply_volumes() -> void:
-	_music.volume_db = -15.0 + linear_to_db(maxf(Settings.music_vol, 0.0001))
+	var db := -15.0 + linear_to_db(maxf(Settings.music_vol, 0.0001))
+	_music.volume_db = db
+	_preview.volume_db = db
 
 
 func set_sound(on: bool) -> void:
@@ -172,42 +221,3 @@ func _build_sfx() -> void:
 	b = _blank(0.05)
 	_note(b, RATE, 0, 0.04, 950, 950, 1, 0.15)
 	_streams["click"] = _to_stream(b, RATE)
-
-
-func _build_music() -> void:
-	# "Korobeiniki" (traditional Russian folk song, public domain), 4-bar phrases.
-	var N := {"A2": 110.0, "E2": 82.41, "D2": 73.42, "C2": 65.41,
-		"A4": 440.0, "B4": 493.88, "C5": 523.25, "D5": 587.33, "E5": 659.25,
-		"F5": 698.46, "G5": 783.99, "A5": 880.0}
-	var mel := [
-		["E5", 2], ["B4", 1], ["C5", 1], ["D5", 2], ["C5", 1], ["B4", 1],
-		["A4", 2], ["A4", 1], ["C5", 1], ["E5", 2], ["D5", 1], ["C5", 1],
-		["B4", 3], ["C5", 1], ["D5", 2], ["E5", 2],
-		["C5", 2], ["A4", 2], ["A4", 4],
-		["D5", 3], ["F5", 1], ["A5", 2], ["G5", 1], ["F5", 1],
-		["E5", 3], ["C5", 1], ["E5", 2], ["D5", 1], ["C5", 1],
-		["B4", 3], ["C5", 1], ["D5", 2], ["E5", 2],
-		["C5", 2], ["A4", 2], ["A4", 4],
-	]
-	var roots := ["A2", "A2", "E2", "A2", "D2", "C2", "E2", "A2"]
-	var unit := 0.19
-	var total_units := 64
-	var buf := _blank(total_units * unit, MRATE)
-	var t := 0.0
-	for m in mel:
-		var d: float = m[1] * unit
-		_note(buf, MRATE, t, d * 0.92, N[m[0]], N[m[0]], 1, 0.2, 0.0, 0.6)
-		t += d
-	for block in 8:
-		var root: float = N[roots[block]]
-		for q in 4:
-			var f := root if q % 2 == 0 else root * 1.5
-			_note(buf, MRATE, (block * 8 + q * 2) * unit, 1.8 * unit, f, f, 2, 0.3, 0.0, 0.5)
-	var stream := _to_stream(buf, MRATE)
-	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	stream.loop_begin = 0
-	stream.loop_end = buf.size()
-	_music.stream = stream
-	_music_ready = true
-	if _music_wanted and Settings.music_on:
-		_music.play()
