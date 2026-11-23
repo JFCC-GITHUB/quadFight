@@ -1,13 +1,9 @@
 extends Node
 ## Procedurally synthesized sound effects + chiptune music (no audio assets).
-## Autoload "Sfx". Settings persist in user://settings.cfg.
+## Autoload "Sfx". On/off and volumes live in the Settings autoload.
 
 const RATE := 22050
 const MRATE := 11025
-const SETTINGS := "user://settings.cfg"
-
-var sound_on := true
-var music_on := true
 
 var _streams := {}
 var _players: Array = []
@@ -17,15 +13,14 @@ var _music_wanted := false
 
 
 func _ready() -> void:
-	_load_settings()
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -6.0
 		add_child(p)
 		_players.append(p)
 	_music = AudioStreamPlayer.new()
-	_music.volume_db = -15.0
 	add_child(_music)
+	apply_volumes()
 	_build_sfx()
 	# Music takes a moment to synthesize; do it after the first frames.
 	await get_tree().create_timer(0.4).timeout
@@ -35,7 +30,7 @@ func _ready() -> void:
 # ---------------------------------------------------------------- public API
 
 func play(sound: String) -> void:
-	if not sound_on or not _streams.has(sound):
+	if not Settings.sound_on or not _streams.has(sound):
 		return
 	var player: AudioStreamPlayer = _players[0]
 	for p in _players:
@@ -43,12 +38,13 @@ func play(sound: String) -> void:
 			player = p
 			break
 	player.stream = _streams[sound]
+	player.volume_db = -6.0 + linear_to_db(maxf(Settings.sound_vol, 0.0001))
 	player.play()
 
 
 func start_music() -> void:
 	_music_wanted = true
-	if music_on and _music_ready and not _music.playing:
+	if Settings.music_on and _music_ready and not _music.playing:
 		_music.play()
 
 
@@ -61,32 +57,23 @@ func pause_music(paused: bool) -> void:
 	_music.stream_paused = paused
 
 
+func apply_volumes() -> void:
+	_music.volume_db = -15.0 + linear_to_db(maxf(Settings.music_vol, 0.0001))
+
+
 func set_sound(on: bool) -> void:
-	sound_on = on
-	_save_settings()
+	Settings.sound_on = on
+	Settings.save()
 
 
 func set_music(on: bool) -> void:
-	music_on = on
-	_save_settings()
+	Settings.music_on = on
+	Settings.save()
 	if on:
-		start_music() if _music_wanted else null
+		if _music_wanted:
+			start_music()
 	else:
 		_music.stop()
-
-
-func _load_settings() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SETTINGS) == OK:
-		sound_on = cfg.get_value("audio", "sound", true)
-		music_on = cfg.get_value("audio", "music", true)
-
-
-func _save_settings() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("audio", "sound", sound_on)
-	cfg.set_value("audio", "music", music_on)
-	cfg.save(SETTINGS)
 
 
 # ---------------------------------------------------------------- synthesis
@@ -222,5 +209,5 @@ func _build_music() -> void:
 	stream.loop_end = buf.size()
 	_music.stream = stream
 	_music_ready = true
-	if _music_wanted and music_on:
+	if _music_wanted and Settings.music_on:
 		_music.play()

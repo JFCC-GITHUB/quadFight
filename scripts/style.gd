@@ -5,14 +5,7 @@ const FONT_DISPLAY := preload("res://assets/fonts/RussoOne-Regular.ttf")
 const FONT_BOLD := preload("res://assets/fonts/Rajdhani-Bold.ttf")
 const FONT_SEMI := preload("res://assets/fonts/Rajdhani-SemiBold.ttf")
 
-const BG := preload("res://assets/bg.jpg")
 const LOGO := preload("res://assets/logo.png")
-const BLOCKS := [
-	preload("res://assets/blocks/block_0.png"), preload("res://assets/blocks/block_1.png"),
-	preload("res://assets/blocks/block_2.png"), preload("res://assets/blocks/block_3.png"),
-	preload("res://assets/blocks/block_4.png"), preload("res://assets/blocks/block_5.png"),
-	preload("res://assets/blocks/block_6.png"),
-]
 const ICONS := {
 	"left": preload("res://assets/icons/left.png"),
 	"right": preload("res://assets/icons/right.png"),
@@ -31,7 +24,9 @@ const ICONS := {
 	"trophy": preload("res://assets/icons/trophy.png"),
 	"home": preload("res://assets/icons/home.png"),
 	"retry": preload("res://assets/icons/retry.png"),
+	"gear": preload("res://assets/icons/gear.png"),
 }
+const KNOB := preload("res://assets/icons/knob.png")
 
 # Palette
 const TEXT := Color("f2f4ff")
@@ -41,10 +36,6 @@ const CYAN := Color("36e2ff")
 const PINK := Color("ff4fb8")
 const PANEL := Color(0.07, 0.08, 0.2, 0.72)
 const PANEL_BORDER := Color(1, 1, 1, 0.1)
-const PIECE_COLORS := [
-	Color("ff6fae"), Color("3de8b5"), Color("ffc247"), Color("4db8ff"),
-	Color("9a7bff"), Color("ff7a4d"), Color("b6e04a"),
-]
 const MEDALS := [Color("ffd34d"), Color("d5def0"), Color("e3955f")]
 
 # Button colour schemes: [face, bottom edge]
@@ -54,6 +45,57 @@ const BTN_GLASS := [Color(1, 1, 1, 0.09), Color(0, 0, 0, 0.35)]
 const BTN_DANGER := [Color("c43d5e"), Color("6e1d33")]
 
 static var _label_font: FontVariation
+static var _data := {}
+static var _block_cache := {}
+static var _bg_cache := {}
+static var _color_cache := {}
+
+
+## Theme / background lists come from assets/themes.json (written by tools/gen_assets.py).
+static func data() -> Dictionary:
+	if _data.is_empty():
+		var f := FileAccess.open("res://assets/themes.json", FileAccess.READ)
+		_data = JSON.parse_string(f.get_as_text())
+	return _data
+
+
+static func theme_list() -> Array:
+	return data()["themes"]
+
+
+static func background_list() -> Array:
+	return data()["backgrounds"]
+
+
+static func theme_colors(theme_id: String) -> Array:
+	if _color_cache.has(theme_id):
+		return _color_cache[theme_id]
+	for t in theme_list():
+		if t["id"] == theme_id:
+			var cols: Array = []
+			for h in t["colors"]:
+				cols.append(Color(h))
+			_color_cache[theme_id] = cols
+			return cols
+	return theme_colors("candy")
+
+
+static func piece_color(kind: int) -> Color:
+	return theme_colors(Settings.theme)[kind]
+
+
+static func block_texture(theme_id: String, kind: int) -> Texture2D:
+	var key := "%s_%d" % [theme_id, kind]
+	if not _block_cache.has(key):
+		_block_cache[key] = load("res://assets/blocks/%s.png" % key)
+	return _block_cache[key]
+
+
+static func bg_texture() -> Texture2D:
+	var id: String = Settings.background
+	if not _bg_cache.has(id):
+		_bg_cache[id] = load("res://assets/bg_%s.jpg" % id)
+	return _bg_cache[id]
 
 
 ## Letter-spaced small caps font for captions.
@@ -101,11 +143,11 @@ static func button_box(scheme: Array, pressed: bool, radius: int = 18) -> StyleB
 
 
 static func draw_block(ci: CanvasItem, kind: int, rect: Rect2, alpha: float = 1.0) -> void:
-	ci.draw_texture_rect(BLOCKS[kind], rect, false, Color(1, 1, 1, alpha))
+	ci.draw_texture_rect(block_texture(Settings.theme, kind), rect, false, Color(1, 1, 1, alpha))
 
 
 static func draw_ghost(ci: CanvasItem, kind: int, rect: Rect2) -> void:
-	var c: Color = PIECE_COLORS[kind]
+	var c: Color = piece_color(kind)
 	var s := StyleBoxFlat.new()
 	s.bg_color = Color(c.r, c.g, c.b, 0.12)
 	s.set_corner_radius_all(5)

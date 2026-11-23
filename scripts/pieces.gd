@@ -11,10 +11,6 @@ const BASE := [
 	[Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)],
 ]
 const BOX := [4, 4, 3, 3, 3, 3, 3]
-const COLORS := [
-	Color("ff6fae"), Color("3de8b5"), Color("ffc247"), Color("4db8ff"),
-	Color("9a7bff"), Color("ff7a4d"), Color("b6e04a"),
-]
 
 # SRS wall kicks, y-up convention (flipped to y-down in kicks()).
 const KICKS_JLSTZ := {
