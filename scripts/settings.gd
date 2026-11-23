@@ -16,7 +16,7 @@ var sfx_style := "arcade"   # "arcade" | "soft"
 var theme := "candy"
 var background := "nebula"
 # Controls
-var layout := "classic"  # "classic" | "thumbs"
+var layout := "snes"  # "snes" | "classic" | "thumbs"
 var swap_sides := false
 var move_speed := 1      # 0 slow, 1 normal, 2 fast
 var ghost := true

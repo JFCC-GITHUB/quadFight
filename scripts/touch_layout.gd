@@ -4,7 +4,7 @@ extends RefCounted
 const Style := preload("res://scripts/style.gd")
 
 const SWAP_SHIFT := 264.0
-const LAYOUTS := ["classic", "thumbs"]
+const LAYOUTS := ["snes", "classic", "thumbs"]
 
 
 ## Returns [{name, icon, rect, held, scheme}] for the given layout.
@@ -12,7 +12,18 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 	var g := Style.BTN_GLASS
 	var list: Array
 	# "left" cluster = x 12..264, "right" cluster = x 276..528 (before swapping).
-	if layout == "thumbs":
+	if layout == "snes":
+		# Gamepad: D-pad (left/right/down) on the left, A/B/X/Y diamond on the right.
+		list = [
+			_b("move_left", "left", 33, 803, 105, 70, true, g, 0, 14),
+			_b("move_right", "right", 138, 803, 105, 70, true, g, 0, 14),
+			_b("soft_drop", "down", 103, 873, 70, 70, true, g, 0, 14),
+			_b("hard_drop", "drop", 364, 732, 76, 76, false, Style.BTN_PRIMARY, 1, 38),
+			_b("hold", "hold", 276, 800, 76, 76, false, g, 1, 38),
+			_b("rotate_ccw", "rotate_ccw", 452, 800, 76, 76, false, Style.BTN_ACCENT, 1, 38),
+			_b("rotate_cw", "rotate", 364, 868, 76, 76, false, Style.BTN_ACCENT, 1, 38),
+		]
+	elif layout == "thumbs":
 		list = [
 			_b("move_left", "left", 12, 732, 122, 100, true, g, 0),
 			_b("move_right", "right", 142, 732, 122, 100, true, g, 0),
@@ -39,6 +50,6 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 
 
 static func _b(name: String, icon: String, x: float, y: float, w: float, h: float,
-		held: bool, scheme: Array, cluster: int) -> Dictionary:
+		held: bool, scheme: Array, cluster: int, radius: int = 20) -> Dictionary:
 	return {"name": name, "icon": icon, "rect": Rect2(x, y, w, h), "held": held,
-		"scheme": scheme, "cluster": cluster}
+		"scheme": scheme, "cluster": cluster, "radius": radius}
