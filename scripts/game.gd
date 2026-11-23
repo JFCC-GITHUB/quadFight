@@ -90,6 +90,7 @@ var arr := 0.035
 # Touch buttons: name, label, rect, repeatable (held) or one-shot.
 var touch_buttons: Array = []
 var touch_map := {} # touch index -> button name
+var soft_lock := false  # soft drop held through a lock: ignored until released, so it can't slam the next piece
 
 
 func _ready() -> void:
@@ -164,6 +165,9 @@ const TOUCH_SLOP := 40.0  # fingers miss small targets: gaps and edges snap to t
 
 
 func _button_at(p: Vector2) -> Dictionary:
+	var pad := _dpad_at(p)
+	if not pad.is_empty():
+		return pad
 	var best := {}
 	var best_d := TOUCH_SLOP
 	for b in touch_buttons:
@@ -173,6 +177,24 @@ func _button_at(p: Vector2) -> Dictionary:
 			best = b
 			best_d = d
 	return best
+
+
+## Direction pad: any touch near the pad picks a direction by angle (left/right favoured),
+## so the thumb doesn't have to hit a small arm exactly.
+func _dpad_at(p: Vector2) -> Dictionary:
+	for b in touch_buttons:
+		if b.has("pad_center") and p.distance_to(b["pad_center"]) < 155.0 and absf(p.x - b["pad_center"].x) < 132.0:
+			var v: Vector2 = p - b["pad_center"]
+			var want := ""
+			# hard drop only from deep in the up arm, so a sloppy down/side press never slams the piece
+			if absf(v.x) >= absf(v.y) * 0.8 or (v.y < 0.0 and v.y > -40.0):
+				want = "move_right" if v.x > 0 else "move_left"
+			else:
+				want = "soft_drop" if v.y > 0 else "hard_drop"
+			for d in touch_buttons:
+				if d.has("pad_center") and d["name"] == want:
+					return d
+	return {}
 
 
 func _touch(event: InputEventScreenTouch) -> void:
@@ -187,6 +209,11 @@ func _touch(event: InputEventScreenTouch) -> void:
 			return
 		if b["held"]:
 			touch_map[event.index] = b["name"]
+			if b["name"] != "soft_drop":
+				var dir := 1 if b["name"] == "move_right" else -1
+				das_dir = dir
+				das_timer = -das
+				_move(dir)
 		else:
 			_one_shot(b["name"])
 	else:
@@ -288,16 +315,22 @@ func gravity_interval() -> float:
 	return pow(0.8 - float(lv - 1) * 0.007, float(lv - 1))
 
 
+func _soft() -> bool:
+	if not _held("soft_drop"):
+		soft_lock = false
+	return _held("soft_drop") and not soft_lock
+
+
 func _current_interval() -> float:
 	var interval := gravity_interval()
-	if _held("soft_drop"):
+	if _soft():
 		interval = minf(interval, 0.05)
 	return interval
 
 
 func _update_gravity(delta: float) -> void:
 	var interval := _current_interval()
-	var soft := _held("soft_drop")
+	var soft := _soft()
 	if _collides(kind, rot, pos + Vector2i(0, 1)):
 		gravity_acc = 0.0
 		lock_timer += delta
@@ -419,6 +452,7 @@ func _spawn(forced := -1) -> void:
 
 
 func _lock(play_sound := true) -> void:
+	soft_lock = _held("soft_drop")
 	var topped_out := true
 	for c in Pieces.cells(kind, rot):
 		var p: Vector2i = pos + c

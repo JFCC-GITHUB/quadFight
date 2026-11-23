@@ -48,6 +48,12 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 		for b in list:
 			var shift := SWAP_SHIFT if b["cluster"] == 0 else -SWAP_SHIFT
 			b["rect"].position.x += shift
+	if layout == "snes":
+		var pad := Rect2()
+		for i in 4:
+			pad = list[i]["rect"] if i == 0 else pad.merge(list[i]["rect"])
+		for i in 4:
+			list[i]["pad_center"] = pad.get_center()
 	return list
 
 
