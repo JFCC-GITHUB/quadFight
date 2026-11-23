@@ -1,0 +1,70 @@
+{
+ "themes": [
+  {
+   "id": "candy",
+   "name": "Candy",
+   "colors": [
+    "ff6fae",
+    "3de8b5",
+    "ffc247",
+    "4db8ff",
+    "9a7bff",
+    "ff7a4d",
+    "b6e04a"
+   ]
+  },
+  {
+   "id": "neon",
+   "name": "Neon",
+   "colors": [
+    "ff3df2",
+    "39ff88",
+    "fff23d",
+    "3dbcff",
+    "ff5a3d",
+    "a05bff",
+    "3dffe8"
+   ]
+  },
+  {
+   "id": "pastel",
+   "name": "Pastel",
+   "colors": [
+    "a8e6ff",
+    "ffe29a",
+    "d3b8ff",
+    "b5f0b0",
+    "ffaab5",
+    "9fb4ff",
+    "ffc79a"
+   ]
+  },
+  {
+   "id": "colorblind",
+   "name": "Colorblind",
+   "colors": [
+    "56b4e9",
+    "f0e442",
+    "cc79a7",
+    "009e73",
+    "d55e00",
+    "0072b2",
+    "e69f00"
+   ]
+  }
+ ],
+ "backgrounds": [
+  {
+   "id": "nebula",
+   "name": "Nebula"
+  },
+  {
+   "id": "midnight",
+   "name": "Midnight"
+  },
+  {
+   "id": "sunset",
+   "name": "Sunset"
+  }
+ ]
+}

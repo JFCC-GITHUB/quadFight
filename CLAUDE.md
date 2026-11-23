@@ -43,8 +43,13 @@ with their OFL.txt kept beside them in `assets/fonts/`.
 - `scripts/ui.gd` – node builders (label, button, icon_button, card, pop_in, audio_toggles).
 - `scripts/game.gd` – gameplay + all in-game drawing; `pieces.gd` SRS data;
   `scores.gd` / `sfx.gd` autoloads (local leaderboard, synthesized audio).
-- Piece colours live in three places that must match: `tools/gen_assets.py` PIECES,
-  `style.gd` PIECE_COLORS, `pieces.gd` COLORS.
+- `scripts/settings.gd` (autoload) – user options saved to `user://settings.cfg`: audio on/off + volumes,
+  block colour theme, background, touch layout / swapped hands, move speed, ghost piece.
+  `options.gd` is the 3-tab UI (COLORS / SOUND / CONTROLS), opened from the title and pause menu.
+  `touch_layout.gd` defines the on-screen button layouts (shared by the game and the options preview).
+- Colour themes and backgrounds are defined ONLY in `tools/gen_assets.py` (`THEMES`, `BACKGROUNDS`).
+  It writes `assets/blocks/<theme>_<kind>.png`, `assets/bg_<id>.jpg` and `assets/themes.json`;
+  `style.gd` reads the JSON at runtime. To add a theme or background, add it there and re-run the script.
 
 ## Verifying changes
 - Headless logic test: a temporary scene with a test script, run

@@ -45,7 +45,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	draw_texture_rect(Style.BG, Rect2(Vector2.ZERO, size), false)
+	draw_texture_rect(Style.bg_texture(), Rect2(Vector2.ZERO, size), false)
 	Style.draw_icon(self, "trophy", Vector2(size.x * 0.5, 44), 40, Style.GOLD)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 104), "RANKING", 40, Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)

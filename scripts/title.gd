@@ -3,20 +3,23 @@ extends Control
 const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
+const OptionsScreen := preload("res://scripts/options.gd")
 
 var main: Node
 var falling: Array = []
 var time := 0.0
+var options_open := false
 
 
 func _ready() -> void:
 	for i in 12:
 		falling.append(_new_piece(randf_range(-120, 960)))
-	UI.button(self, "PLAY", Rect2(110, 530, 320, 100), func(): main.show_game(), 40,
+	UI.button(self, "PLAY", Rect2(110, 520, 320, 100), func(): main.show_game(), 40,
 		Style.BTN_PRIMARY, "play")
-	UI.button(self, "RANKING", Rect2(110, 652, 320, 80), func(): main.show_leaderboard(), 28,
+	UI.button(self, "RANKING", Rect2(110, 636, 320, 76), func(): main.show_leaderboard(), 28,
 		Style.BTN_GLASS, "trophy")
-	UI.audio_toggles(self, 270, 762)
+	UI.button(self, "OPTIONS", Rect2(110, 728, 320, 76), _open_options, 28,
+		Style.BTN_GLASS, "gear")
 
 
 func _new_piece(y: float) -> Dictionary:
@@ -38,13 +41,22 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func _open_options() -> void:
+	options_open = true
+	var o := OptionsScreen.new()
+	o.on_close = func(): options_open = false
+	add_child(o)
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if options_open:
+		return
 	if event.is_action_pressed("confirm"):
 		main.show_game()
 
 
 func _draw() -> void:
-	draw_texture_rect(Style.BG, Rect2(Vector2.ZERO, size), false)
+	draw_texture_rect(Style.bg_texture(), Rect2(Vector2.ZERO, size), false)
 	for p in falling:
 		var cell: float = p["cell"]
 		var center := Vector2(p["x"], p["y"])

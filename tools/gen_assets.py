@@ -16,7 +16,35 @@ ASSETS = os.path.join(ROOT, "assets")
 FONT_DISPLAY = os.path.join(ASSETS, "fonts", "RussoOne-Regular.ttf")
 
 # Piece colours: I O T S Z J L  (keep in sync with scripts/style.gd)
-PIECES = ["ff6fae", "3de8b5", "ffc247", "4db8ff", "9a7bff", "ff7a4d", "b6e04a"]
+# Block colour themes, piece order: I O T S Z J L.  Written to assets/themes.json,
+# which scripts/style.gd reads at runtime (this file is the single source of truth).
+THEMES = [
+    {"id": "candy", "name": "Candy",
+     "colors": ["ff6fae", "3de8b5", "ffc247", "4db8ff", "9a7bff", "ff7a4d", "b6e04a"]},
+    {"id": "neon", "name": "Neon",
+     "colors": ["ff3df2", "39ff88", "fff23d", "3dbcff", "ff5a3d", "a05bff", "3dffe8"]},
+    {"id": "pastel", "name": "Pastel",
+     "colors": ["a8e6ff", "ffe29a", "d3b8ff", "b5f0b0", "ffaab5", "9fb4ff", "ffc79a"]},
+    {"id": "colorblind", "name": "Colorblind",  # Okabe-Ito palette
+     "colors": ["56b4e9", "f0e442", "cc79a7", "009e73", "d55e00", "0072b2", "e69f00"]},
+]
+
+BACKGROUNDS = [
+    {"id": "nebula", "name": "Nebula",
+     "stops": [(0.0, (14, 18, 52)), (0.5, (22, 12, 50)), (1.0, (8, 8, 26))],
+     "blobs": [(120, 260, 520, (40, 200, 255), 70), (980, 1400, 620, (255, 60, 190), 55),
+               (560, 900, 700, (120, 70, 255), 40), (900, 120, 360, (255, 160, 60), 30)],
+     "stars": 170},
+    {"id": "midnight", "name": "Midnight",
+     "stops": [(0.0, (8, 10, 24)), (0.6, (10, 14, 34)), (1.0, (4, 5, 14))],
+     "blobs": [(200, 300, 600, (60, 110, 255), 38), (900, 1500, 700, (40, 60, 160), 30)],
+     "stars": 90},
+    {"id": "sunset", "name": "Sunset",
+     "stops": [(0.0, (26, 14, 66)), (0.55, (86, 28, 88)), (1.0, (120, 40, 60))],
+     "blobs": [(900, 1500, 760, (255, 120, 70), 60), (150, 500, 560, (255, 70, 150), 45),
+               (600, 200, 500, (140, 90, 255), 38)],
+     "stars": 60},
+]
 
 
 def hex_rgb(h):
@@ -84,18 +112,11 @@ def make_block(hex_color, size=96, ss=4):
 
 # ------------------------------------------------------------------ background
 
-def make_background(w=1080, h=1920):
-    img = vgradient((w, h), None, None, [
-        (0.0, (14, 18, 52)), (0.5, (22, 12, 50)), (1.0, (8, 8, 26)),
-    ]).convert("RGBA")
+def make_background(cfg, w=1080, h=1920):
+    img = vgradient((w, h), None, None, cfg["stops"]).convert("RGBA")
     glow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
-    for (cx, cy, rad, col, a) in [
-        (120, 260, 520, (40, 200, 255), 70),
-        (980, 1400, 620, (255, 60, 190), 55),
-        (560, 900, 700, (120, 70, 255), 40),
-        (900, 120, 360, (255, 160, 60), 30),
-    ]:
+    for (cx, cy, rad, col, a) in cfg["blobs"]:
         gd.ellipse((cx - rad, cy - rad, cx + rad, cy + rad), fill=col + (a,))
     glow = glow.filter(ImageFilter.GaussianBlur(220))
     img = Image.alpha_composite(img, glow)
@@ -108,7 +129,7 @@ def make_background(w=1080, h=1920):
     # Stars
     rnd = random.Random(7)
     st = ImageDraw.Draw(img)
-    for _ in range(170):
+    for _ in range(cfg["stars"]):
         x, y = rnd.randrange(w), rnd.randrange(h)
         r = rnd.choice([1, 1, 1, 2, 2, 3])
         st.ellipse((x - r, y - r, x + r, y + r), fill=(255, 255, 255, rnd.randrange(30, 140)))
@@ -296,13 +317,52 @@ def make_icons():
     ic.rrect(0.43, 0.6, 0.57, 0.82, 0.02)
     ic.save("home")
 
+    # Settings gear: 8 teeth around a ring with a hole.
+    ic = Icon()
+    pts = []
+    for i in range(8):
+        a0 = i * 45.0
+        for da, r in [(-13, 0.31), (-9, 0.42), (9, 0.42), (13, 0.31)]:
+            ang = math.radians(a0 + da)
+            pts.append((0.5 + r * math.cos(ang), 0.5 + r * math.sin(ang)))
+    ic.poly(pts)
+    ic.d.ellipse((*ic.p(0.5 - 0.31, 0.5 - 0.31), *ic.p(0.5 + 0.31, 0.5 + 0.31)), fill=255)
+    ic.d.ellipse((*ic.p(0.5 - 0.14, 0.5 - 0.14), *ic.p(0.5 + 0.14, 0.5 + 0.14)), fill=0)
+    ic.save("gear")
+
+
+def make_knob(size=64, ss=4):
+    S = size * ss
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).ellipse((S * 0.14, S * 0.2, S * 0.86, S * 0.92), fill=(0, 0, 0, 120))
+    img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(S * 0.03)))
+    d = ImageDraw.Draw(img)
+    d.ellipse((S * 0.12, S * 0.1, S * 0.88, S * 0.86), fill=(255, 255, 255, 255))
+    d.ellipse((S * 0.2, S * 0.18, S * 0.8, S * 0.78), fill=(214, 226, 255, 255))
+    d.ellipse((S * 0.24, S * 0.2, S * 0.76, S * 0.7), fill=(255, 255, 255, 255))
+    img.resize((size, size), Image.LANCZOS).save(os.path.join(ASSETS, "icons", "knob.png"))
+
 
 def main():
-    for i, c in enumerate(PIECES):
-        make_block(c).save(os.path.join(ASSETS, "blocks", f"block_{i}.png"))
-    make_background().save(os.path.join(ASSETS, "bg.jpg"), quality=90)
+    import json
+    import glob
+    for d in ("blocks", "icons", "fonts"):
+        os.makedirs(os.path.join(ASSETS, d), exist_ok=True)
+    for old in glob.glob(os.path.join(ASSETS, "blocks", "*.png")):
+        os.remove(old)
+    for t in THEMES:
+        for i, c in enumerate(t["colors"]):
+            make_block(c).save(os.path.join(ASSETS, "blocks", f"{t['id']}_{i}.png"))
+    for bg in BACKGROUNDS:
+        make_background(bg).save(os.path.join(ASSETS, f"bg_{bg['id']}.jpg"), quality=90)
     make_logo().save(os.path.join(ASSETS, "logo.png"))
     make_icons()
+    make_knob()
+    with open(os.path.join(ASSETS, "themes.json"), "w") as f:
+        json.dump({"themes": THEMES,
+                   "backgrounds": [{"id": b["id"], "name": b["name"]} for b in BACKGROUNDS]},
+                  f, indent=1)
     print("assets written to", ASSETS)
 
 

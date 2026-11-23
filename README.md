@@ -12,6 +12,12 @@ Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支�
 | 暫存 | C / Shift | X | HOLD |
 | 暫停 | P / Esc | Start | 右上角 ⏸ |
 
+## 選項（標題畫面或暫停選單 → OPTIONS）
+- **COLORS**：方塊配色 4 種（Candy / Neon / Pastel / Colorblind）、背景 3 種（Nebula / Midnight / Sunset）
+- **SOUND**：音效、音樂各自的開關與音量
+- **CONTROLS**：觸控版型（Classic / Thumbs，後者多一顆逆時針旋轉）、移動按鈕放左手或右手、長按移動速度、落點預覽開關，附即時預覽
+- 設定會存在瀏覽器儲存空間，下次開啟自動套用
+
 ## 美術素材
 - `tools/gen_assets.py` 用 Python（Pillow + numpy）生成方塊材質、背景、Logo、按鈕圖示，輸出到 `assets/`。改顏色或形狀後重跑：`python3 tools/gen_assets.py`
 - 字型：Russo One、Rajdhani（Google Fonts，SIL Open Font License，授權檔在 `assets/fonts/`）

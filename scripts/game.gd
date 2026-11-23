@@ -5,6 +5,8 @@ extends Control
 const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
+const TouchLayout := preload("res://scripts/touch_layout.gd")
+const OptionsScreen := preload("res://scripts/options.gd")
 
 const COLS := 10
 const ROWS := 20
@@ -15,8 +17,6 @@ const RIGHT_X := 428.0
 const COL_W := 100.0
 const PAUSE_RECT := Rect2(16, 24, 56, 56)
 
-const DAS := 0.13
-const ARR := 0.035
 const LOCK_DELAY := 0.5
 const MAX_LOCK_RESETS := 15
 const CLEAR_TIME := 0.38
@@ -69,6 +69,9 @@ var time := 0.0
 var _btn_styles := {}
 
 var overlay: Control
+var options_open := false
+var das := 0.13
+var arr := 0.035
 
 # Touch buttons: name, label, rect, repeatable (held) or one-shot.
 var touch_buttons: Array = []
@@ -76,16 +79,7 @@ var touch_map := {} # touch index -> button name
 
 
 func _ready() -> void:
-	touch_buttons = [
-		{"name": "move_left", "icon": "left", "rect": Rect2(12, 732, 120, 100), "held": true, "scheme": Style.BTN_GLASS},
-		{"name": "move_right", "icon": "right", "rect": Rect2(140, 732, 122, 100), "held": true, "scheme": Style.BTN_GLASS},
-		{"name": "soft_drop", "icon": "down", "rect": Rect2(12, 842, 250, 100), "held": true, "scheme": Style.BTN_GLASS},
-		{"name": "hold", "icon": "hold", "rect": Rect2(278, 732, 120, 100), "held": false, "scheme": Style.BTN_GLASS},
-		{"name": "rotate_cw", "icon": "rotate", "rect": Rect2(406, 732, 122, 100), "held": false, "scheme": Style.BTN_ACCENT},
-		{"name": "hard_drop", "icon": "drop", "rect": Rect2(278, 842, 250, 100), "held": false, "scheme": Style.BTN_PRIMARY},
-	]
-	for b in touch_buttons:
-		_btn_styles[b["name"]] = [Style.button_box(b["scheme"], false, 20), Style.button_box(b["scheme"], true, 20)]
+	_apply_settings()
 	for r in ROWS:
 		board.append(_empty_row())
 	_spawn()
@@ -94,6 +88,17 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Sfx.stop_music()
+
+
+## (Re)reads options: touch layout, auto-repeat speed. Called at start and after the options screen.
+func _apply_settings() -> void:
+	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides)
+	_btn_styles.clear()
+	for b in touch_buttons:
+		_btn_styles[b["name"]] = [Style.button_box(b["scheme"], false, 20), Style.button_box(b["scheme"], true, 20)]
+	das = Settings.DAS[Settings.move_speed]
+	arr = Settings.ARR[Settings.move_speed]
+	touch_map.clear()
 
 
 func _empty_row() -> Array:
@@ -110,6 +115,8 @@ func _held(action: String) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	if options_open:
+		return
 	if event is InputEventScreenTouch:
 		_touch(event)
 		return
@@ -231,12 +238,12 @@ func _update_horizontal(delta: float) -> void:
 		return
 	if dir != das_dir:
 		das_dir = dir
-		das_timer = -DAS
+		das_timer = -das
 		_move(dir)
 		return
 	das_timer += delta
-	while das_timer >= ARR:
-		das_timer -= ARR
+	while das_timer >= arr:
+		das_timer -= arr
 		_move(dir)
 
 
@@ -323,7 +330,7 @@ func _hard_drop() -> void:
 	if pos.y > start.y:
 		for cx in tops:
 			trails.append({"x": pos.x + cx, "y0": start.y + tops[cx], "y1": pos.y + tops[cx],
-				"t": 0.2, "color": Pieces.COLORS[kind]})
+				"t": 0.2, "color": Style.piece_color(kind)})
 	_shake(0.12, 3.0)
 	Sfx.play("drop")
 	_lock(false)
@@ -416,7 +423,7 @@ func _begin_clear(rows: Array) -> void:
 					"pos": center + Vector2(randf_range(-8, 8), randf_range(-8, 8)),
 					"vel": Vector2(randf_range(-160, 160), randf_range(-320, -40)),
 					"life": randf_range(0.4, 0.8), "max": 0.8,
-					"color": Pieces.COLORS[board[y][x]], "size": randf_range(3, 7),
+					"color": Style.piece_color(board[y][x]), "size": randf_range(3, 7),
 				})
 	_popup(["", "SINGLE", "DOUBLE", "TRIPLE", "QUAD!"][n],
 		Color("ffd400") if n == 4 else Color.WHITE)
@@ -458,13 +465,22 @@ func _toggle_pause() -> void:
 		Sfx.pause_music(true)
 		var c := _open_overlay(Rect2(70, 250, 400, 440))
 		UI.label(c, "PAUSED", Rect2(0, 30, 400, 70), 44, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
-		UI.button(c, "RESUME", Rect2(40, 120, 320, 92), _toggle_pause, 32, Style.BTN_PRIMARY, "play")
-		UI.audio_toggles(c, 200, 232)
-		UI.button(c, "MENU", Rect2(40, 320, 320, 78), func(): main.show_title(), 26, Style.BTN_GLASS, "home")
+		UI.button(c, "RESUME", Rect2(40, 116, 320, 92), _toggle_pause, 32, Style.BTN_PRIMARY, "play")
+		UI.button(c, "OPTIONS", Rect2(40, 224, 320, 78), _open_options, 26, Style.BTN_GLASS, "gear")
+		UI.button(c, "MENU", Rect2(40, 318, 320, 78), func(): main.show_title(), 26, Style.BTN_GLASS, "home")
 	elif state == State.PAUSED:
 		state = paused_from
 		Sfx.pause_music(false)
 		_close_overlay()
+
+
+func _open_options() -> void:
+	options_open = true
+	var o := OptionsScreen.new()
+	o.on_close = func():
+		options_open = false
+		_apply_settings()
+	add_child(o)
 
 
 func _game_over() -> void:
@@ -635,7 +651,7 @@ func _danger() -> bool:
 
 
 func _draw() -> void:
-	draw_texture_rect(Style.BG, Rect2(Vector2.ZERO, size), false)
+	draw_texture_rect(Style.bg_texture(), Rect2(Vector2.ZERO, size), false)
 	_draw_header()
 	_draw_side_panels()
 
@@ -735,10 +751,11 @@ func _draw_board() -> void:
 			draw_rect(Rect2(BOARD_POS.x + t["x"] * CELL + 5, y0, CELL - 10, (bottom - top) / steps + 1), c)
 
 	if state == State.PLAYING or state == State.PAUSED:
-		var gp := ghost_pos()
-		for c in Pieces.cells(kind, rot):
-			if gp.y + c.y >= 0:
-				Style.draw_ghost(self, kind, _cell_rect(gp.x + c.x, gp.y + c.y))
+		if Settings.ghost:
+			var gp := ghost_pos()
+			for c in Pieces.cells(kind, rot):
+				if gp.y + c.y >= 0:
+					Style.draw_ghost(self, kind, _cell_rect(gp.x + c.x, gp.y + c.y))
 		var off := _fall_offset()
 		for c in Pieces.cells(kind, rot):
 			if pos.y + c.y >= 0:

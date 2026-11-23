@@ -84,21 +84,3 @@ static func pop_in(node: Control) -> void:
 	var t := node.create_tween().set_parallel(true)
 	t.tween_property(node, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	t.tween_property(node, "modulate:a", 1.0, 0.18)
-
-
-## Two round icon buttons toggling sound effects / music, centred at x.
-static func audio_toggles(parent: Node, center_x: float, y: float, size: float = 64.0) -> void:
-	var s := icon_button(parent, "sound_on", Rect2(center_x - size - 8, y, size, size), func(): pass)
-	var m := icon_button(parent, "music_on", Rect2(center_x + 8, y, size, size), func(): pass)
-	var refresh := func():
-		s.icon = Style.ICONS["sound_on" if Sfx.sound_on else "sound_off"]
-		m.icon = Style.ICONS["music_on" if Sfx.music_on else "music_off"]
-		s.modulate.a = 1.0 if Sfx.sound_on else 0.55
-		m.modulate.a = 1.0 if Sfx.music_on else 0.55
-	s.pressed.connect(func():
-		Sfx.set_sound(not Sfx.sound_on)
-		refresh.call())
-	m.pressed.connect(func():
-		Sfx.set_music(not Sfx.music_on)
-		refresh.call())
-	refresh.call()
