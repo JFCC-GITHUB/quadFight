@@ -25,6 +25,7 @@ const ICONS := {
 	"home": preload("res://assets/icons/home.png"),
 	"retry": preload("res://assets/icons/retry.png"),
 	"gear": preload("res://assets/icons/gear.png"),
+	"swords": preload("res://assets/icons/swords.png"),
 }
 const KNOB := preload("res://assets/icons/knob.png")
 

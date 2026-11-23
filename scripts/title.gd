@@ -14,11 +14,13 @@ var options_open := false
 func _ready() -> void:
 	for i in 12:
 		falling.append(_new_piece(randf_range(-120, 960)))
-	UI.button(self, "PLAY", Rect2(110, 520, 320, 100), func(): main.show_game(), 40,
+	UI.button(self, "PLAY", Rect2(110, 498, 320, 88), func(): main.show_game(), 38,
 		Style.BTN_PRIMARY, "play")
-	UI.button(self, "RANKING", Rect2(110, 636, 320, 76), func(): main.show_leaderboard(), 28,
+	UI.button(self, "VS CPU", Rect2(110, 596, 320, 80), func(): main.show_vs_select(), 32,
+		Style.BTN_ACCENT, "swords")
+	UI.button(self, "RANKING", Rect2(110, 686, 320, 68), func(): main.show_leaderboard(), 26,
 		Style.BTN_GLASS, "trophy")
-	UI.button(self, "OPTIONS", Rect2(110, 728, 320, 76), _open_options, 28,
+	UI.button(self, "OPTIONS", Rect2(110, 764, 320, 68), _open_options, 26,
 		Style.BTN_GLASS, "gear")
 
 
@@ -73,7 +75,7 @@ func _draw() -> void:
 	draw_texture_rect(Style.LOGO, Rect2((size.x - logo_w) * 0.5, 150 + bob, logo_w, logo_h), false)
 
 	# Best score pill
-	var pill := Rect2(150, 446, 240, 54)
+	var pill := Rect2(150, 436, 240, 50)
 	draw_style_box(Style.panel_box(Color(0, 0, 0, 0.35), 27, Color(1, 0.83, 0.3, 0.35)), pill)
 	Style.draw_icon(self, "trophy", pill.position + Vector2(34, 27), 26, Style.GOLD)
 	var best := Scores.best()
@@ -83,7 +85,7 @@ func _draw() -> void:
 
 	# Controls hint
 	var f := Style.FONT_SEMI
-	var y := 868.0
+	var y := 866.0
 	for line in ["Keyboard   Arrows · Space drop · C hold · P pause",
 			"Gamepad   D-pad · A / B rotate · X hold · Start",
 			"Touch   on-screen buttons"]:
