@@ -1,6 +1,7 @@
 extends Control
 
 const UI := preload("res://scripts/ui.gd")
+const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
 
 var main: Node
@@ -9,22 +10,21 @@ var time := 0.0
 
 
 func _ready() -> void:
-	for i in 14:
-		falling.append(_new_piece(randf_range(-100, 960)))
-	var best := "BEST  %d" % Scores.best() if Scores.best() > 0 else "No score yet - play!"
-	UI.label(self, best, Rect2(0, 440, 540, 50), 28, Color("ffd400"))
-	UI.button(self, "START", Rect2(120, 520, 300, 90), func(): main.show_game(), 38, Color("2f9e55"))
-	UI.button(self, "LEADERBOARD", Rect2(120, 630, 300, 76), func(): main.show_leaderboard(), 28)
-	UI.audio_toggles(self, 725)
-	UI.label(self, "Keyboard: arrows move/rotate, Space drop, C hold, P pause\nGamepad: D-pad + A/B/X, Start = pause\nTouch: on-screen buttons",
-		Rect2(20, 820, 500, 100), 16, Color("8a93b8"))
+	for i in 12:
+		falling.append(_new_piece(randf_range(-120, 960)))
+	UI.button(self, "PLAY", Rect2(110, 530, 320, 100), func(): main.show_game(), 40,
+		Style.BTN_PRIMARY, "play")
+	UI.button(self, "RANKING", Rect2(110, 652, 320, 80), func(): main.show_leaderboard(), 28,
+		Style.BTN_GLASS, "trophy")
+	UI.audio_toggles(self, 270, 762)
 
 
 func _new_piece(y: float) -> Dictionary:
 	return {
 		"kind": randi() % 7, "rot": randi() % 4,
-		"x": randf_range(-20, 500), "y": y,
-		"speed": randf_range(30, 90), "scale": randf_range(14, 26),
+		"x": randf_range(-30, 500), "y": y,
+		"speed": randf_range(25, 70), "cell": randf_range(16, 30),
+		"spin": randf_range(-0.3, 0.3), "angle": randf() * TAU,
 	}
 
 
@@ -32,8 +32,9 @@ func _process(delta: float) -> void:
 	time += delta
 	for p in falling:
 		p["y"] += p["speed"] * delta
-		if p["y"] > 980:
-			p.merge(_new_piece(-100), true)
+		p["angle"] += p["spin"] * delta
+		if p["y"] > 1000:
+			p.merge(_new_piece(-120), true)
 	queue_redraw()
 
 
@@ -43,14 +44,36 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("0d1020"))
+	draw_texture_rect(Style.BG, Rect2(Vector2.ZERO, size), false)
 	for p in falling:
-		var s: float = p["scale"]
-		var col: Color = Pieces.COLORS[p["kind"]]
-		col.a = 0.22
-		for c in Pieces.cells(p["kind"], p["rot"]):
-			draw_rect(Rect2(Vector2(p["x"], p["y"]) + Vector2(c) * s, Vector2(s - 2, s - 2)), col)
-	var font := ThemeDB.fallback_font
-	var bob := sin(time * 2.0) * 5.0
-	draw_string(font, Vector2(0, 250 + bob), "TETRIS", HORIZONTAL_ALIGNMENT_CENTER, 540, 84, Color.WHITE)
-	draw_string(font, Vector2(0, 335 - bob), "FIGHT", HORIZONTAL_ALIGNMENT_CENTER, 540, 84, Color("ff5a5a"))
+		var cell: float = p["cell"]
+		var center := Vector2(p["x"], p["y"])
+		draw_set_transform(center, p["angle"])
+		var cells := Pieces.cells(p["kind"], p["rot"])
+		for c in cells:
+			Style.draw_block(self, p["kind"], Rect2(Vector2(c) * cell - Vector2(cell, cell) * 1.5, Vector2(cell, cell)), 0.28)
+	draw_set_transform(Vector2.ZERO)
+
+	# Logo
+	var logo_w := 490.0
+	var logo_h: float = logo_w * Style.LOGO.get_height() / Style.LOGO.get_width()
+	var bob := sin(time * 1.8) * 6.0
+	draw_texture_rect(Style.LOGO, Rect2((size.x - logo_w) * 0.5, 150 + bob, logo_w, logo_h), false)
+
+	# Best score pill
+	var pill := Rect2(150, 446, 240, 54)
+	draw_style_box(Style.panel_box(Color(0, 0, 0, 0.35), 27, Color(1, 0.83, 0.3, 0.35)), pill)
+	Style.draw_icon(self, "trophy", pill.position + Vector2(34, 27), 26, Style.GOLD)
+	var best := Scores.best()
+	Style.text(self, Style.caption_font(), pill.position + Vector2(56, 34), "BEST", 18, Style.MUTED)
+	Style.text(self, Style.FONT_DISPLAY, pill.position + Vector2(0, 38), str(best) if best > 0 else "-",
+		26, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, pill.size.x - 24)
+
+	# Controls hint
+	var f := Style.FONT_SEMI
+	var y := 868.0
+	for line in ["Keyboard   Arrows · Space drop · C hold · P pause",
+			"Gamepad   D-pad · A / B rotate · X hold · Start",
+			"Touch   on-screen buttons"]:
+		Style.text(self, f, Vector2(0, y), line, 17, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+		y += 26

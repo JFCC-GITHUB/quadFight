@@ -12,6 +12,11 @@ Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支�
 | 暫存 | C / Shift | X | HOLD |
 | 暫停 | P / Esc | Start | 右上角 ⏸ |
 
+## 美術素材
+- `tools/gen_assets.py` 用 Python（Pillow + numpy）生成方塊材質、背景、Logo、按鈕圖示，輸出到 `assets/`。改顏色或形狀後重跑：`python3 tools/gen_assets.py`
+- 字型：Russo One、Rajdhani（Google Fonts，SIL Open Font License，授權檔在 `assets/fonts/`）
+- 介面配色與繪圖輔助集中在 `scripts/style.gd`
+
 ## 本機開發
 用 Godot 4.7 開啟專案資料夾，按 F5。
 

@@ -3,13 +3,17 @@ extends Control
 ## plus line-clear / drop / lock animations and sound.
 
 const UI := preload("res://scripts/ui.gd")
+const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
 
 const COLS := 10
 const ROWS := 20
-const CELL := 32
-const BOARD_POS := Vector2(16, 100)
-const SIDE_X := 352.0
+const CELL := 30
+const BOARD_POS := Vector2(120, 112)
+const LEFT_X := 12.0
+const RIGHT_X := 428.0
+const COL_W := 100.0
+const PAUSE_RECT := Rect2(16, 24, 56, 56)
 
 const DAS := 0.13
 const ARR := 0.035
@@ -60,6 +64,9 @@ var entering_name := false
 var name_chars: Array = [0, 0, 0]
 var name_cursor := 0
 var name_labels: Array = []
+var name_slots: Array = []
+var time := 0.0
+var _btn_styles := {}
 
 var overlay: Control
 
@@ -69,18 +76,16 @@ var touch_map := {} # touch index -> button name
 
 
 func _ready() -> void:
-	var w := 164.0
-	var h := 84.0
-	var x0 := [16.0, 188.0, 360.0]
-	var y0 := [772.0, 868.0]
 	touch_buttons = [
-		{"name": "move_left", "label": "<", "rect": Rect2(x0[0], y0[0], w, h), "held": true},
-		{"name": "rotate_cw", "label": "ROTATE", "rect": Rect2(x0[1], y0[0], w, h), "held": false},
-		{"name": "move_right", "label": ">", "rect": Rect2(x0[2], y0[0], w, h), "held": true},
-		{"name": "soft_drop", "label": "v", "rect": Rect2(x0[0], y0[1], w, h), "held": true},
-		{"name": "hard_drop", "label": "DROP", "rect": Rect2(x0[1], y0[1], w, h), "held": false},
-		{"name": "hold", "label": "HOLD", "rect": Rect2(x0[2], y0[1], w, h), "held": false},
+		{"name": "move_left", "icon": "left", "rect": Rect2(12, 732, 120, 100), "held": true, "scheme": Style.BTN_GLASS},
+		{"name": "move_right", "icon": "right", "rect": Rect2(140, 732, 122, 100), "held": true, "scheme": Style.BTN_GLASS},
+		{"name": "soft_drop", "icon": "down", "rect": Rect2(12, 842, 250, 100), "held": true, "scheme": Style.BTN_GLASS},
+		{"name": "hold", "icon": "hold", "rect": Rect2(278, 732, 120, 100), "held": false, "scheme": Style.BTN_GLASS},
+		{"name": "rotate_cw", "icon": "rotate", "rect": Rect2(406, 732, 122, 100), "held": false, "scheme": Style.BTN_ACCENT},
+		{"name": "hard_drop", "icon": "drop", "rect": Rect2(278, 842, 250, 100), "held": false, "scheme": Style.BTN_PRIMARY},
 	]
+	for b in touch_buttons:
+		_btn_styles[b["name"]] = [Style.button_box(b["scheme"], false, 20), Style.button_box(b["scheme"], true, 20)]
 	for r in ROWS:
 		board.append(_empty_row())
 	_spawn()
@@ -140,7 +145,7 @@ func _button_at(p: Vector2) -> Dictionary:
 
 func _touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
-		if Rect2(470, 20, 56, 56).has_point(event.position) and state != State.OVER:
+		if PAUSE_RECT.has_point(event.position) and state != State.OVER:
 			_toggle_pause()
 			return
 		if state != State.PLAYING:
@@ -183,6 +188,7 @@ func _notification(what: int) -> void:
 # ---------------------------------------------------------------- game loop
 
 func _process(delta: float) -> void:
+	time += delta
 	_update_effects(delta)
 	match state:
 		State.PLAYING:
@@ -450,10 +456,11 @@ func _toggle_pause() -> void:
 		state = State.PAUSED
 		touch_map.clear()
 		Sfx.pause_music(true)
-		_open_overlay("PAUSED", "")
-		UI.button(overlay, "RESUME", Rect2(120, 400, 300, 80), _toggle_pause, 32, Color("2f9e55"))
-		UI.audio_toggles(overlay, 500)
-		UI.button(overlay, "MENU", Rect2(120, 580, 300, 70), func(): main.show_title(), 28)
+		var c := _open_overlay(Rect2(70, 250, 400, 440))
+		UI.label(c, "PAUSED", Rect2(0, 30, 400, 70), 44, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+		UI.button(c, "RESUME", Rect2(40, 120, 320, 92), _toggle_pause, 32, Style.BTN_PRIMARY, "play")
+		UI.audio_toggles(c, 200, 232)
+		UI.button(c, "MENU", Rect2(40, 320, 320, 78), func(): main.show_title(), 26, Style.BTN_GLASS, "home")
 	elif state == State.PAUSED:
 		state = paused_from
 		Sfx.pause_music(false)
@@ -465,6 +472,7 @@ func _game_over() -> void:
 	touch_map.clear()
 	Sfx.stop_music()
 	Sfx.play("gameover")
+	_shake(0.4, 6.0)
 	if Scores.qualifies(score):
 		_open_name_entry()
 	else:
@@ -473,15 +481,21 @@ func _game_over() -> void:
 
 func _show_over(rank: int) -> void:
 	entering_name = false
-	var info := "Score  %d\nLines  %d   Level  %d" % [score, lines, level]
+	var c := _open_overlay(Rect2(50, 200, 440, 540))
+	UI.label(c, "GAME OVER", Rect2(0, 26, 440, 70), 44, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.label(c, "SCORE", Rect2(0, 100, 440, 30), 18, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.caption_font())
+	UI.label(c, str(score), Rect2(0, 126, 440, 76), 60, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.label(c, "LINES  %d      LEVEL  %d" % [lines, level], Rect2(0, 206, 440, 36), 22, Style.TEXT)
+	var tag := ""
 	if rank == 1:
-		info += "\n\nNEW BEST!"
+		tag = "NEW BEST!"
 	elif rank > 0:
-		info += "\n\nRank #%d" % rank
-	_open_overlay("GAME OVER", info)
-	UI.button(overlay, "PLAY AGAIN", Rect2(120, 520, 300, 80), func(): main.show_game(), 32, Color("2f9e55"))
-	UI.button(overlay, "MENU", Rect2(120, 620, 140, 70), func(): main.show_title(), 26)
-	UI.button(overlay, "SCORES", Rect2(280, 620, 140, 70), func(): main.show_leaderboard(), 26)
+		tag = "RANK #%d" % rank
+	if tag != "":
+		UI.label(c, tag, Rect2(0, 248, 440, 46), 30, Style.GOLD, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.button(c, "PLAY AGAIN", Rect2(40, 316, 360, 92), func(): main.show_game(), 30, Style.BTN_PRIMARY, "retry")
+	UI.button(c, "MENU", Rect2(40, 428, 170, 74), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
+	UI.button(c, "RANKING", Rect2(230, 428, 170, 74), func(): main.show_leaderboard(), 20, Style.BTN_GLASS, "trophy")
 
 
 func _open_name_entry() -> void:
@@ -491,15 +505,30 @@ func _open_name_entry() -> void:
 	for i in 3:
 		var ch := saved.unicode_at(i) if i < saved.length() else 65
 		name_chars[i] = clampi(ch - 65, 0, 25)
-	_open_overlay("NEW HIGH SCORE!", "Score  %d\nEnter your initials" % score)
+	var c := _open_overlay(Rect2(50, 170, 440, 620))
+	UI.label(c, "NEW HIGH SCORE!", Rect2(0, 26, 440, 60), 34, Style.GOLD, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.label(c, str(score), Rect2(0, 86, 440, 64), 50, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	UI.label(c, "ENTER YOUR NAME", Rect2(0, 150, 440, 34), 18, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.caption_font())
 	name_labels.clear()
+	name_slots.clear()
 	for i in 3:
-		var cx := 150.0 + i * 120.0
+		var cx := 100.0 + i * 120.0
 		var idx := i
-		UI.button(overlay, "^", Rect2(cx - 40, 420, 80, 56), func(): _step_letter(idx, 1), 28)
-		name_labels.append(UI.label(overlay, "A", Rect2(cx - 40, 480, 80, 90), 72))
-		UI.button(overlay, "v", Rect2(cx - 40, 575, 80, 56), func(): _step_letter(idx, -1), 24)
-	UI.button(overlay, "OK", Rect2(120, 670, 300, 80), _confirm_name, 34, Color("2f9e55"))
+		UI.icon_button(c, "up", Rect2(cx - 40, 196, 80, 60), func(): _step_letter(idx, 1))
+		var slot := Panel.new()
+		slot.position = Vector2(cx - 48, 270)
+		slot.size = Vector2(96, 116)
+		slot.mouse_filter = Control.MOUSE_FILTER_STOP
+		slot.gui_input.connect(func(e):
+			if e is InputEventMouseButton and e.pressed:
+				name_cursor = idx
+				_refresh_name())
+		c.add_child(slot)
+		name_slots.append(slot)
+		name_labels.append(UI.label(slot, "A", Rect2(0, 0, 96, 116), 64, Style.TEXT,
+			HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY))
+		UI.icon_button(c, "down", Rect2(cx - 40, 400, 80, 60), func(): _step_letter(idx, -1))
+	UI.button(c, "OK", Rect2(40, 500, 360, 90), _confirm_name, 34, Style.BTN_PRIMARY)
 	_refresh_name()
 
 
@@ -512,8 +541,12 @@ func _step_letter(i: int, d: int) -> void:
 func _refresh_name() -> void:
 	for i in 3:
 		name_labels[i].text = char(65 + name_chars[i])
-		name_labels[i].add_theme_color_override("font_color",
-			Color("ffd400") if i == name_cursor else Color.WHITE)
+		var active := i == name_cursor
+		name_labels[i].add_theme_color_override("font_color", Style.CYAN if active else Style.TEXT)
+		name_slots[i].add_theme_stylebox_override("panel", Style.panel_box(
+			Color(0, 0, 0, 0.35), 16,
+			Style.CYAN if active else Color(1, 1, 1, 0.15),
+			Color(0.2, 0.8, 1, 0.35) if active else Color(0, 0, 0, 0), 14 if active else 0))
 
 
 func _name_input(event: InputEvent) -> void:
@@ -535,8 +568,17 @@ func _name_input(event: InputEvent) -> void:
 			_step_letter(name_cursor, -1)
 		elif k == KEY_ENTER or k == KEY_KP_ENTER:
 			_confirm_name()
-	elif event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A:
-		_confirm_name()
+	elif event is InputEventJoypadButton and event.pressed:
+		match event.button_index:
+			JOY_BUTTON_A: _confirm_name()
+			JOY_BUTTON_DPAD_UP: _step_letter(name_cursor, 1)
+			JOY_BUTTON_DPAD_DOWN: _step_letter(name_cursor, -1)
+			JOY_BUTTON_DPAD_LEFT:
+				name_cursor = maxi(name_cursor - 1, 0)
+				_refresh_name()
+			JOY_BUTTON_DPAD_RIGHT:
+				name_cursor = mini(name_cursor + 1, 2)
+				_refresh_name()
 
 
 func _confirm_name() -> void:
@@ -548,18 +590,21 @@ func _confirm_name() -> void:
 	_show_over(Scores.add(player, score, lines, level))
 
 
-func _open_overlay(title: String, info: String) -> void:
+## Dimmed overlay + animated card. Returns the card to add content to.
+func _open_overlay(card_rect: Rect2) -> Panel:
 	_close_overlay()
 	overlay = Control.new()
 	overlay.size = size
 	add_child(overlay)
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.78)
+	dim.color = Color(0.02, 0.01, 0.08, 0.7)
 	dim.size = size
 	overlay.add_child(dim)
-	UI.label(overlay, title, Rect2(0, 200, 540, 80), 46)
-	if info != "":
-		UI.label(overlay, info, Rect2(0, 290, 540, 120), 26, Color("ffd400"))
+	dim.modulate.a = 0.0
+	dim.create_tween().tween_property(dim, "modulate:a", 1.0, 0.2)
+	var c := UI.card(overlay, card_rect)
+	UI.pop_in(c)
+	return c
 
 
 func _close_overlay() -> void:
@@ -574,17 +619,6 @@ func _cell_rect(cx: int, cy: int) -> Rect2:
 	return Rect2(BOARD_POS + Vector2(cx, cy) * CELL, Vector2(CELL, CELL))
 
 
-func _draw_block(r: Rect2, color: Color, alpha := 1.0) -> void:
-	color.a = alpha
-	draw_rect(r.grow(-1), color)
-	draw_rect(Rect2(r.position + Vector2(1, 1), Vector2(r.size.x - 2, 4)), Color(1, 1, 1, 0.25 * alpha))
-
-
-func _draw_mini(k: int, origin: Vector2, scale := 16.0, alpha := 1.0) -> void:
-	for c in Pieces.cells(k, 0):
-		_draw_block(Rect2(origin + Vector2(c) * scale, Vector2(scale, scale)), Pieces.COLORS[k], alpha)
-
-
 ## Smooth falling: interpolate the active piece between rows.
 func _fall_offset() -> float:
 	if state != State.PLAYING or _collides(kind, rot, pos + Vector2i(0, 1)):
@@ -592,64 +626,133 @@ func _fall_offset() -> float:
 	return clampf(gravity_acc / _current_interval(), 0.0, 1.0) * CELL
 
 
+func _danger() -> bool:
+	for y in 4:
+		for x in COLS:
+			if board[y][x] != -1:
+				return true
+	return false
+
+
 func _draw() -> void:
-	var font := ThemeDB.fallback_font
-	draw_rect(Rect2(Vector2.ZERO, size), Color("0d1020"))
+	draw_texture_rect(Style.BG, Rect2(Vector2.ZERO, size), false)
+	_draw_header()
+	_draw_side_panels()
 
 	# Everything on/over the board shakes together.
 	if shake_time > 0.0:
 		var m := shake_mag * shake_time / shake_dur
 		draw_set_transform(Vector2(randf_range(-m, m), randf_range(-m, m)))
+	_draw_board()
+	draw_set_transform(Vector2.ZERO)
 
+	_draw_touch_buttons()
+
+
+func _draw_header() -> void:
+	# Pause button
+	var pressed := state == State.PAUSED
+	draw_style_box(Style.button_box(Style.BTN_GLASS, pressed, 16), PAUSE_RECT)
+	Style.draw_icon(self, "pause", PAUSE_RECT.get_center() + Vector2(0, 2 if pressed else -2), 28)
+	# Score
+	var cap := Style.caption_font()
+	Style.text(self, cap, Vector2(0, 42), "SCORE", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 88), str(int(round(display_score))), 40, Style.TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
+	# Best
+	var best := maxi(Scores.best(), score)
+	Style.text(self, cap, Vector2(400, 42), "BEST", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+	Style.text(self, Style.FONT_DISPLAY, Vector2(400, 74), str(best), 22, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+
+
+func _side_panel(rect: Rect2, title: String) -> void:
+	draw_style_box(Style.panel_box(Style.PANEL, 16), rect)
+	Style.text(self, Style.caption_font(), rect.position + Vector2(0, 26), title, 15, Style.MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+
+
+func _draw_side_panels() -> void:
+	var hold_r := Rect2(LEFT_X, BOARD_POS.y, COL_W, 100)
+	_side_panel(hold_r, "HOLD")
+	if hold_kind >= 0:
+		Style.draw_piece_centered(self, Pieces.cells(hold_kind, 0), hold_kind,
+			hold_r.position + Vector2(COL_W * 0.5, 62), 18.0, 0.35 if hold_used else 1.0)
+	var stats := [["LEVEL", str(level), 226.0], ["LINES", str(lines), 322.0]]
+	for st in stats:
+		var r := Rect2(LEFT_X, st[2], COL_W, 84)
+		_side_panel(r, st[0])
+		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(0, 68), st[1], 30, Style.TEXT,
+			HORIZONTAL_ALIGNMENT_CENTER, COL_W)
+
+	var next_r := Rect2(RIGHT_X, BOARD_POS.y, COL_W, 300)
+	_side_panel(next_r, "NEXT")
+	var y := next_r.position.y + 76
+	for i in 3:
+		var cell := 20.0 if i == 0 else 16.0
+		Style.draw_piece_centered(self, Pieces.cells(queue[i], 0), queue[i],
+			Vector2(RIGHT_X + COL_W * 0.5, y), cell, 1.0 if i == 0 else 0.8)
+		y += 86.0 if i == 0 else 72.0
+
+
+func _draw_board() -> void:
 	var board_rect := Rect2(BOARD_POS, Vector2(COLS, ROWS) * CELL)
-	draw_rect(board_rect, Color("141a33"))
-	for x in range(1, COLS):
-		draw_line(BOARD_POS + Vector2(x * CELL, 0), BOARD_POS + Vector2(x * CELL, ROWS * CELL), Color(1, 1, 1, 0.05))
+	var danger := _danger() and state != State.OVER
+	var pulse := 0.5 + 0.5 * sin(time * 6.0)
+	var border := Color(1, 0.3, 0.4, 0.5 + 0.4 * pulse) if danger else Color(0.55, 0.65, 1, 0.35)
+	var glow := Color(1, 0.2, 0.35, 0.35) if danger else Color(0.2, 0.55, 1, 0.28)
+	draw_style_box(Style.panel_box(Color(0.02, 0.02, 0.08, 0.86), 12, border, glow, 22), board_rect.grow(6))
+	for x in COLS:
+		if x % 2 == 0:
+			draw_rect(Rect2(BOARD_POS + Vector2(x * CELL, 0), Vector2(CELL, ROWS * CELL)), Color(1, 1, 1, 0.022))
 	for y in range(1, ROWS):
-		draw_line(BOARD_POS + Vector2(0, y * CELL), BOARD_POS + Vector2(COLS * CELL, y * CELL), Color(1, 1, 1, 0.05))
+		for x in range(1, COLS):
+			draw_rect(Rect2(BOARD_POS + Vector2(x * CELL - 1, y * CELL - 1), Vector2(2, 2)), Color(1, 1, 1, 0.12))
 
 	var clear_progress := 1.0 - clear_timer / CLEAR_TIME
 	for y in ROWS:
 		var clearing: bool = clear_rows.has(y)
 		for x in COLS:
 			var v: int = board[y][x]
-			if v < 0:
-				continue
-			if clearing:
-				_draw_block(_cell_rect(x, y), Pieces.COLORS[v], 1.0 - clear_progress)
-			else:
-				_draw_block(_cell_rect(x, y), Pieces.COLORS[v])
+			if v >= 0:
+				Style.draw_block(self, v, _cell_rect(x, y), 1.0 - clear_progress if clearing else 1.0)
 		if clearing:
-			var pulse := 0.5 + 0.5 * sin(clear_progress * TAU * 3.0)
-			var row_w := COLS * CELL * (1.0 - clear_progress * 0.6)
+			var flash := 0.5 + 0.5 * sin(clear_progress * TAU * 3.0)
+			var row_w := COLS * CELL * (1.0 - clear_progress * 0.7)
 			var rx := BOARD_POS.x + (COLS * CELL - row_w) * 0.5
-			draw_rect(Rect2(rx, BOARD_POS.y + y * CELL, row_w, CELL), Color(1, 1, 1, 0.35 + 0.5 * pulse))
+			draw_rect(Rect2(rx, BOARD_POS.y + y * CELL + 2, row_w, CELL - 4), Color(1, 1, 1, 0.35 + 0.5 * flash))
 
 	# Hard-drop trails
 	for t in trails:
 		var a: float = t["t"] / 0.2
 		var c: Color = t["color"]
-		c.a = 0.4 * a
 		var top: float = BOARD_POS.y + t["y0"] * CELL
 		var bottom: float = BOARD_POS.y + t["y1"] * CELL
-		draw_rect(Rect2(BOARD_POS.x + t["x"] * CELL + 4, top, CELL - 8, bottom - top), c)
+		var steps := 8
+		for i in steps:
+			var k := float(i) / steps
+			c.a = 0.45 * a * k
+			var y0 := lerpf(top, bottom, k)
+			draw_rect(Rect2(BOARD_POS.x + t["x"] * CELL + 5, y0, CELL - 10, (bottom - top) / steps + 1), c)
 
 	if state == State.PLAYING or state == State.PAUSED:
 		var gp := ghost_pos()
 		for c in Pieces.cells(kind, rot):
 			if gp.y + c.y >= 0:
-				_draw_block(_cell_rect(gp.x + c.x, gp.y + c.y), Pieces.COLORS[kind], 0.22)
+				Style.draw_ghost(self, kind, _cell_rect(gp.x + c.x, gp.y + c.y))
 		var off := _fall_offset()
 		for c in Pieces.cells(kind, rot):
 			if pos.y + c.y >= 0:
 				var r := _cell_rect(pos.x + c.x, pos.y + c.y)
 				r.position.y += off
-				_draw_block(r, Pieces.COLORS[kind])
+				Style.draw_block(self, kind, r)
 
 	# Lock flash
 	for f in flashes:
 		var cell: Vector2i = f["c"]
-		draw_rect(_cell_rect(cell.x, cell.y).grow(-1), Color(1, 1, 1, 0.8 * f["t"] / 0.22))
+		var fs := StyleBoxFlat.new()
+		fs.bg_color = Color(1, 1, 1, 0.75 * f["t"] / 0.22)
+		fs.set_corner_radius_all(5)
+		draw_style_box(fs, _cell_rect(cell.x, cell.y).grow(-2))
 
 	# Particles
 	for p in particles:
@@ -658,8 +761,6 @@ func _draw() -> void:
 		var s: float = p["size"]
 		draw_rect(Rect2(p["pos"] - Vector2(s, s) * 0.5, Vector2(s, s)), c)
 
-	draw_rect(board_rect, Color(1, 1, 1, 0.25), false, 2.0)
-
 	# Popups
 	for i in popups.size():
 		var p: Dictionary = popups[i]
@@ -667,41 +768,17 @@ func _draw() -> void:
 		var c: Color = p["color"]
 		c.a = minf(1.0, life * 2.5)
 		var rise := (1.0 - life) * 40.0
-		draw_string(font, Vector2(BOARD_POS.x, 340 - rise + i * 52), p["text"],
-			HORIZONTAL_ALIGNMENT_CENTER, COLS * CELL, 44, c)
+		var grow := 1.0 + maxf(0.0, life - 0.85) * 2.0
+		Style.text(self, Style.FONT_DISPLAY, Vector2(BOARD_POS.x, 360 - rise + i * 54), p["text"],
+			int(42 * grow), c, HORIZONTAL_ALIGNMENT_CENTER, COLS * CELL, 10, Color(0.05, 0.02, 0.15, c.a))
 
-	draw_set_transform(Vector2.ZERO)
 
-	# Side panel
-	var pw := 172.0
-	draw_string(font, Vector2(SIDE_X, 118), "HOLD", HORIZONTAL_ALIGNMENT_LEFT, pw, 18, Color("8a93b8"))
-	draw_rect(Rect2(SIDE_X, 126, pw, 76), Color("141a33"))
-	if hold_kind >= 0:
-		_draw_mini(hold_kind, Vector2(SIDE_X + 52, 140), 16.0, 0.4 if hold_used else 1.0)
-	draw_string(font, Vector2(SIDE_X, 232), "NEXT", HORIZONTAL_ALIGNMENT_LEFT, pw, 18, Color("8a93b8"))
-	draw_rect(Rect2(SIDE_X, 240, pw, 240), Color("141a33"))
-	for i in 3:
-		_draw_mini(queue[i], Vector2(SIDE_X + 52, 254 + i * 76))
-	_stat(font, "SCORE", str(int(round(display_score))), 520)
-	_stat(font, "LINES", str(lines), 590)
-	_stat(font, "LEVEL", str(level), 660)
-	draw_string(font, Vector2(16, 70), "BEST %d" % maxi(Scores.best(), score), HORIZONTAL_ALIGNMENT_LEFT, 300, 24, Color("ffd400"))
-
-	# Pause button
-	draw_rect(Rect2(470, 20, 56, 56), Color("2b3a6b"))
-	draw_rect(Rect2(487, 34, 8, 28), Color.WHITE)
-	draw_rect(Rect2(502, 34, 8, 28), Color.WHITE)
-
-	# Touch buttons
+func _draw_touch_buttons() -> void:
 	var down := touch_map.values()
+	var playing := state == State.PLAYING
 	for b in touch_buttons:
-		var pressed: bool = down.has(b["name"])
-		var col := Color("3d4f8f") if pressed else Color("26335f")
-		draw_rect(b["rect"], col)
-		draw_rect(b["rect"], Color(1, 1, 1, 0.2), false, 2.0)
-		draw_string(font, b["rect"].position + Vector2(0, 54), b["label"], HORIZONTAL_ALIGNMENT_CENTER, b["rect"].size.x, 30, Color.WHITE)
-
-
-func _stat(font: Font, title: String, value: String, y: float) -> void:
-	draw_string(font, Vector2(SIDE_X, y), title, HORIZONTAL_ALIGNMENT_LEFT, 172, 18, Color("8a93b8"))
-	draw_string(font, Vector2(SIDE_X, y + 38), value, HORIZONTAL_ALIGNMENT_LEFT, 172, 38, Color.WHITE)
+		var pressed: bool = down.has(b["name"]) or (playing and Input.is_action_pressed(b["name"]))
+		var r: Rect2 = b["rect"]
+		draw_style_box(_btn_styles[b["name"]][1 if pressed else 0], r)
+		var center := r.get_center() + Vector2(0, 3 if pressed else -2)
+		Style.draw_icon(self, b["icon"], center, 46.0, Color(1, 1, 1, 1.0 if playing else 0.5))
