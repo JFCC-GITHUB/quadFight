@@ -50,7 +50,7 @@ Super Robot 風格只是參考 70–80 年代日本超級機器人動畫主題�
 ## 部署到 GitHub Pages（iOS 試玩）
 1. 合併到 `main`（workflow 只在 main 觸發，也可在 Actions 頁手動 Run workflow）
 2. Repo → Settings → Pages → Source 選 **GitHub Actions**
-3. 網址：`https://<帳號>.github.io/quadfight/`
+3. 網址：`https://<帳號>.github.io/quadFight/`
 4. iOS Safari 開啟後「分享 → 加入主畫面」可全螢幕遊玩，排行榜存在瀏覽器儲存空間。
 
 ## 結構
