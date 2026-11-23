@@ -160,11 +160,19 @@ func _input(event: InputEvent) -> void:
 			_one_shot(a)
 
 
+const TOUCH_SLOP := 40.0  # fingers miss small targets: gaps and edges snap to the nearest button
+
+
 func _button_at(p: Vector2) -> Dictionary:
+	var best := {}
+	var best_d := TOUCH_SLOP
 	for b in touch_buttons:
-		if b["rect"].has_point(p):
-			return b
-	return {}
+		var r: Rect2 = b["rect"]
+		var d := p.distance_to(p.clamp(r.position, r.end))  # 0 inside the rect
+		if d < best_d:
+			best = b
+			best_d = d
+	return best
 
 
 func _touch(event: InputEventScreenTouch) -> void:
