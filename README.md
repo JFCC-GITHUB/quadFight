@@ -1,6 +1,13 @@
 # QuadFight
 
-Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支援鍵盤／手把／觸控。
+> **Free, non-commercial hobby project.** QuadFight is a personal project made for fun and for the author's own play.
+> It is free: no ads, no in-app purchases, no donations, nothing is sold, and no money is made from it.
+> It is an independent work and is not affiliated with, endorsed by, or sponsored by any other game or company.
+>
+> **免費、非營利的個人興趣專案。** QuadFight 是作者為了好玩、自己遊玩而做的作品：完全免費，沒有廣告、
+> 沒有內購、沒有收款或贊助，也不從中獲利。本專案為獨立作品，與任何其他遊戲或公司沒有關聯，也未獲其背書或贊助。
+
+Godot 4.7 單人落塊益智遊戲。起始畫面、分數、本機排行榜，支援鍵盤／手把／觸控。
 
 ## 操作
 | | 鍵盤 | 手把 | 觸控 |
@@ -41,4 +48,4 @@ Godot 4.7 單人俄羅斯方塊。起始畫面、分數、本機排行榜，支�
 ## 授權
 - 程式碼與自製美術：MIT License，見 `LICENSE`
 - 第三方（Godot、字型等）：見 `THIRD_PARTY_NOTICES.md`
-- 「Tetris」為其權利人的註冊商標；本專案為獨立作品，與其無關聯
+- 「Tetris」為其權利人的註冊商標；本專案為獨立作品，與其無關聯。本專案為免費的個人興趣專案，不營利

@@ -23,6 +23,11 @@ The background music is a synthesized arrangement of "Korobeiniki", a traditiona
 song in the public domain. No audio files are bundled; all sound is generated in code
 (`scripts/sfx.gd`).
 
-## Trademarks
-"Tetris" is a registered trademark of its owner. QuadFight is an independent project and is
-not affiliated with, endorsed by, or sponsored by The Tetris Company or Tetris Holding.
+## Trademarks and purpose
+QuadFight is a free, non-commercial personal hobby project, made for fun and for the author's own
+play. It has no ads, no in-app purchases and no donations, and the author earns nothing from it.
+
+"Tetris" is a registered trademark of its owner. QuadFight is an independent work and is not
+affiliated with, endorsed by, or sponsored by The Tetris Company, Tetris Holding, or any other
+game publisher. All other product names (e.g. Godot, iOS, Safari) belong to their respective owners
+and are mentioned only to describe compatibility.
