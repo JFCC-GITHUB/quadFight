@@ -16,7 +16,7 @@ ASSETS = os.path.join(ROOT, "assets")
 FONT_DISPLAY = os.path.join(ASSETS, "fonts", "RussoOne-Regular.ttf")
 
 # Piece colours: I O T S Z J L  (keep in sync with scripts/style.gd)
-PIECES = ["33e1ff", "ffd23f", "b45cff", "4be37a", "ff4d6d", "4d7dff", "ff9a3c"]
+PIECES = ["ff6fae", "3de8b5", "ffc247", "4db8ff", "9a7bff", "ff7a4d", "b6e04a"]
 
 
 def hex_rgb(h):

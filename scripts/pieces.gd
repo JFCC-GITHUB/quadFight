@@ -12,8 +12,8 @@ const BASE := [
 ]
 const BOX := [4, 4, 3, 3, 3, 3, 3]
 const COLORS := [
-	Color("33e1ff"), Color("ffd23f"), Color("b45cff"), Color("4be37a"),
-	Color("ff4d6d"), Color("4d7dff"), Color("ff9a3c"),
+	Color("ff6fae"), Color("3de8b5"), Color("ffc247"), Color("4db8ff"),
+	Color("9a7bff"), Color("ff7a4d"), Color("b6e04a"),
 ]
 
 # SRS wall kicks, y-up convention (flipped to y-down in kicks()).

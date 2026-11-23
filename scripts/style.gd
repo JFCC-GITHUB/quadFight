@@ -42,8 +42,8 @@ const PINK := Color("ff4fb8")
 const PANEL := Color(0.07, 0.08, 0.2, 0.72)
 const PANEL_BORDER := Color(1, 1, 1, 0.1)
 const PIECE_COLORS := [
-	Color("33e1ff"), Color("ffd23f"), Color("b45cff"), Color("4be37a"),
-	Color("ff4d6d"), Color("4d7dff"), Color("ff9a3c"),
+	Color("ff6fae"), Color("3de8b5"), Color("ffc247"), Color("4db8ff"),
+	Color("9a7bff"), Color("ff7a4d"), Color("b6e04a"),
 ]
 const MEDALS := [Color("ffd34d"), Color("d5def0"), Color("e3955f")]
 
