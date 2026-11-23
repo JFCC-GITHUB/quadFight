@@ -34,6 +34,8 @@ func _swap(screen: Control) -> void:
 	screen.set("main", self)
 	screen.size = SCREEN_SIZE
 	add_child(screen)
+	screen.modulate.a = 0.0
+	screen.create_tween().tween_property(screen, "modulate:a", 1.0, 0.2)
 
 
 func _setup_input() -> void:
