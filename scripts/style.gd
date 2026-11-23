@@ -59,6 +59,13 @@ static func data() -> Dictionary:
 	return _data
 
 
+static func music_styles() -> Array:
+	if not _data.has("music"):
+		var f := FileAccess.open("res://assets/music/styles.json", FileAccess.READ)
+		_data["music"] = JSON.parse_string(f.get_as_text())["styles"]
+	return _data["music"]
+
+
 static func theme_list() -> Array:
 	return data()["themes"]
 

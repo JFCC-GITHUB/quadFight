@@ -1,0 +1,24 @@
+{
+ "styles": [
+  {
+   "id": "robot",
+   "name": "Super Robot",
+   "desc": "Heroic mecha-anime rock (default)"
+  },
+  {
+   "id": "chip",
+   "name": "Chiptune",
+   "desc": "Bouncy 8-bit adventure"
+  },
+  {
+   "id": "synth",
+   "name": "Synthwave",
+   "desc": "Neon 80s night drive"
+  },
+  {
+   "id": "calm",
+   "name": "Chill",
+   "desc": "Soft and relaxed"
+  }
+ ]
+}
