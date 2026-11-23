@@ -43,6 +43,12 @@ const MEDALS := [Color("ffd34d"), Color("d5def0"), Color("e3955f")]
 const BTN_PRIMARY := [Color("19c7e6"), Color("0d6f99")]
 const BTN_ACCENT := [Color("9b5cff"), Color("5a2bb3")]
 const BTN_GLASS := [Color(1, 1, 1, 0.09), Color(0, 0, 0, 0.35)]
+# SNES pad colours: dark D-pad, red A / yellow B / blue X / green Y.
+const BTN_DPAD := [Color("5a5f6e"), Color("2b2e38")]
+const BTN_SNES_A := [Color("e04848"), Color("9c1f2a")]
+const BTN_SNES_B := [Color("f2c230"), Color("b07d10")]
+const BTN_SNES_X := [Color("4a86e8"), Color("23499c")]
+const BTN_SNES_Y := [Color("48c070"), Color("1f7a42")]
 const BTN_DANGER := [Color("c43d5e"), Color("6e1d33")]
 
 static var _label_font: FontVariation

@@ -112,7 +112,7 @@ func _apply_settings() -> void:
 	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides)
 	_btn_styles.clear()
 	for b in touch_buttons:
-		_btn_styles[b["name"]] = [Style.button_box(b["scheme"], false, b["radius"]), Style.button_box(b["scheme"], true, b["radius"])]
+		_btn_styles[b["rect"].position] = [Style.button_box(b["scheme"], false, b["radius"]), Style.button_box(b["scheme"], true, b["radius"])]
 	das = Settings.DAS[Settings.move_speed]
 	arr = Settings.ARR[Settings.move_speed]
 	touch_map.clear()
@@ -1005,6 +1005,6 @@ func _draw_touch_buttons() -> void:
 	for b in touch_buttons:
 		var pressed: bool = down.has(b["name"]) or (playing and Input.is_action_pressed(b["name"]))
 		var r: Rect2 = b["rect"]
-		draw_style_box(_btn_styles[b["name"]][1 if pressed else 0], r)
+		draw_style_box(_btn_styles[b["rect"].position][1 if pressed else 0], r)
 		var center := r.get_center() + Vector2(0, 3 if pressed else -2)
 		Style.draw_icon(self, b["icon"], center, 46.0, Color(1, 1, 1, 1.0 if playing else 0.5))
