@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Draws the six VS-mode characters (busts), small portraits and skill icons into assets/chars/.
+"""Draws the six VS-mode characters as 16-bit style pixel art (busts, portraits, skill icons) into assets/chars/.
 
 Run: python3 tools/gen_characters.py   (needs Pillow + numpy; re-run when a design changes).
-Technique: every shape is drawn at 3x on its own layer -> gradient body, dark rim, top bevel, gloss.
+Technique: aliased shapes on a 96px grid, 4-band dithered shading, 1px outline, top highlight, nearest-neighbour 5x.
 """
 import math
 import os
@@ -20,113 +20,104 @@ def hex_rgb(h):
     return _hex(h.lstrip("#"))
 
 OUT = os.path.join(ASSETS, "chars")
-SIZE, SS = 512, 3
-S = SIZE * SS
+W, UP = 96, 5  # drawn on a 96px grid, enlarged 5x with nearest neighbour -> 480px pixel art
+BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0 - 0.5
+YY, XX = np.mgrid[0:W, 0:W]
+BAYER = np.tile(BAYER, (W // 4, W // 4))
+CHECK = ((XX + YY) % 2 == 0)
+BANDS = 4
 
 
 def mir(pts):
     return [(1 - x, y) for x, y in pts]
 
 
+def col(c):
+    return np.array(hex_rgb(c) if isinstance(c, str) else c, np.uint8)
+
+
 class Canvas:
+    """Pixel-art canvas: aliased shapes, banded + dithered shading, 1px dark outline, 1px top highlight."""
+
     def __init__(self):
-        self.img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        self.px = np.zeros((W, W, 4), np.uint8)
 
     def _mask(self, shape):
-        m = Image.new("L", (S, S), 0)
+        m = Image.new("L", (W, W), 0)
         d = ImageDraw.Draw(m)
         if shape[0] == "e":
             x0, y0, x1, y1 = shape[1]
-            d.ellipse((x0 * S, y0 * S, x1 * S, y1 * S), fill=255)
+            d.ellipse((x0 * W, y0 * W, x1 * W - 1, y1 * W - 1), fill=255)
         else:
-            d.polygon([(x * S, y * S) for x, y in shape[1]], fill=255)
+            d.polygon([(x * W, y * W) for x, y in shape[1]], fill=255)
         return m
 
-    def shape(self, shape, top, bottom, rim=None, rim_w=3.0, shine=0.35, alpha=1.0):
-        """Gradient-filled shape with dark rim, top bevel line and a soft gloss."""
-        top, bottom = hex_rgb(top) if isinstance(top, str) else top, hex_rgb(bottom) if isinstance(bottom, str) else bottom
+    @staticmethod
+    def _arr(m):
+        return np.array(m) > 127
+
+    def _put(self, mask, rgb, alpha=255):
+        self.px[mask] = (*rgb, alpha)
+
+    def shape(self, shape, top, bottom, rim=None, rim_w=0, shine=0.35, alpha=1.0):
+        t0, t1 = col(top), col(bottom)
         m = self._mask(shape)
-        bb = m.getbbox()
-        if not bb:
+        mk = self._arr(m)
+        if not mk.any():
             return
-        x0, y0, x1, y1 = bb
-        h = max(y1 - y0, 1)
-        t = np.clip((np.arange(S)[:, None] - y0) / h, 0, 1)
-        t = np.broadcast_to(t, (S, S))[..., None]
-        col = np.array(top)[None, None, :] * (1 - t) + np.array(bottom)[None, None, :] * t
-        body = Image.fromarray(col.astype(np.uint8), "RGB").convert("RGBA")
-        rim_c = hex_rgb(rim) if isinstance(rim, str) else (rim or mix(bottom, (0, 0, 0), 0.6))
-        r = int(rim_w * SS)
-        inner = m.filter(ImageFilter.MinFilter(2 * r + 1))
-        layer = Image.new("RGBA", (S, S), rim_c + (255,))
-        layer.paste(body, (0, 0), inner)
-        # top bevel: inner edge lit from above
-        lit = ImageChops.subtract(inner, ImageChops.offset(inner, 0, int(r * 1.2)))
-        lit = lit.filter(ImageFilter.GaussianBlur(SS * 0.8))
-        hi = Image.new("RGBA", (S, S), mix(top, (255, 255, 255), 0.65) + (255,))
-        layer.paste(hi, (0, 0), lit.point(lambda v: int(v * 0.75)))
-        # gloss: blurred white band in the upper part
+        ys, xs = np.nonzero(mk)
+        y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
+        t = (YY - y0) / max(y1 - y0, 1) * 0.85 + (XX - x0) / max(x1 - x0, 1) * 0.25
+        band = np.clip(np.floor(t * BANDS + BAYER * 0.9), 0, BANDS - 1).astype(int)
+        ramp = np.array([t0 + (t1.astype(int) - t0.astype(int)) * i / (BANDS - 1) for i in range(BANDS)]).astype(np.uint8)
+        outline = self._arr(m.filter(ImageFilter.MaxFilter(3))) & ~mk
+        rim_c = col(rim) if rim is not None else (t1 * 0.35).astype(np.uint8)
+        self._put(outline, rim_c)
+        self.px[mk] = np.concatenate([ramp[band[mk]], np.full((mk.sum(), 1), 255, np.uint8)], axis=1)
         if shine:
-            g = Image.new("L", (S, S), 0)
-            ImageDraw.Draw(g).ellipse((x0 + (x1 - x0) * 0.1, y0 + h * 0.04, x1 - (x1 - x0) * 0.1, y0 + h * 0.5), fill=int(255 * shine))
-            g = g.filter(ImageFilter.GaussianBlur(h * 0.12))
-            g = ImageChops.multiply(g, inner)
-            layer.paste(Image.new("RGBA", (S, S), (255, 255, 255, 255)), (0, 0), g)
-        a = m if alpha >= 1 else m.point(lambda v: int(v * alpha))
-        out = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-        out.paste(layer, (0, 0), a)
-        self.img = Image.alpha_composite(self.img, out)
+            up = np.zeros_like(mk)
+            up[1:] = mk[1:] & ~mk[:-1]
+            hi = np.clip(t0.astype(int) + 90, 0, 255).astype(np.uint8)
+            self._put(up & (XX < x0 + (x1 - x0) * 0.75), hi)
 
     def flat(self, shape, color, alpha=1.0):
-        m = self._mask(shape)
-        if alpha < 1:
-            m = m.point(lambda v: int(v * alpha))
-        c = hex_rgb(color) if isinstance(color, str) else color
-        self.img = Image.alpha_composite(self.img, Image.composite(Image.new("RGBA", (S, S), c + (255,)), Image.new("RGBA", (S, S), (0, 0, 0, 0)), m))
+        self._put(self._arr(self._mask(shape)), col(color))
 
     def glow(self, shape, color, blur=0.02, strength=1.0, core=None):
         m = self._mask(shape)
-        c = hex_rgb(color) if isinstance(color, str) else color
-        g = m.filter(ImageFilter.GaussianBlur(blur * S)).point(lambda v: min(255, int(v * 2 * strength)))
-        self.img = Image.alpha_composite(self.img, Image.composite(Image.new("RGBA", (S, S), c + (255,)), Image.new("RGBA", (S, S), (0, 0, 0, 0)), g))
-        cc = hex_rgb(core) if isinstance(core, str) else (core or mix(c, (255, 255, 255), 0.8))
-        self.flat(shape, cc)
+        mk = self._arr(m)
+        k = max(1, round(blur * W * 1.2))
+        halo = self._arr(m.filter(ImageFilter.MaxFilter(2 * k + 1))) & ~mk & CHECK
+        c = col(color)
+        self._put(halo, c)
+        self._put(mk, c)
+        inner = self._arr(m.filter(ImageFilter.MinFilter(3)))
+        cc = col(core) if core else np.clip(c.astype(int) + 150, 0, 255).astype(np.uint8)
+        self._put(inner if inner.any() else mk, cc)
 
     def line(self, pts, color, w, alpha=1.0, glow=0.0):
-        m = Image.new("L", (S, S), 0)
-        d = ImageDraw.Draw(m)
-        P = [(x * S, y * S) for x, y in pts]
-        d.line(P, fill=255, width=int(w * SS), joint="curve")
-        for x, y in P:
-            d.ellipse((x - w * SS / 2, y - w * SS / 2, x + w * SS / 2, y + w * SS / 2), fill=255)
-        c = hex_rgb(color) if isinstance(color, str) else color
+        m = Image.new("L", (W, W), 0)
+        wp = max(1, round(w * W / 512 * 1.3))
+        ImageDraw.Draw(m).line([(x * W, y * W) for x, y in pts], fill=255, width=wp, joint="curve")
+        mk = self._arr(m)
+        c = col(color)
         if glow:
-            g = m.filter(ImageFilter.GaussianBlur(glow * S)).point(lambda v: min(255, v * 2))
-            self.img = Image.alpha_composite(self.img, Image.composite(Image.new("RGBA", (S, S), c + (255,)), Image.new("RGBA", (S, S), (0, 0, 0, 0)), g))
-        if alpha < 1:
-            m = m.point(lambda v: int(v * alpha))
-        self.img = Image.alpha_composite(self.img, Image.composite(Image.new("RGBA", (S, S), c + (255,)), Image.new("RGBA", (S, S), (0, 0, 0, 0)), m))
+            self._put(self._arr(m.filter(ImageFilter.MaxFilter(5))) & ~mk & CHECK, c)
+        self._put(mk, c)
 
     def aura(self, color, cy=0.46, r=0.5):
-        """Soft radial glow + faint rays behind the figure."""
-        yy, xx = np.mgrid[0:S, 0:S] / S
-        d = np.sqrt((xx - 0.5) ** 2 + (yy - cy) ** 2) / r
-        a = np.clip(1 - d, 0, 1) ** 1.6
-        ang = np.arctan2(yy - cy, xx - 0.5)
-        a = a * (0.75 + 0.25 * np.cos(ang * 10))
-        c = hex_rgb(color) if isinstance(color, str) else color
-        lay = np.zeros((S, S, 4), np.uint8)
+        d = np.sqrt((XX / W - 0.5) ** 2 + (YY / W - cy) ** 2) / r
+        ang = np.arctan2(YY / W - cy, XX / W - 0.5)
+        v = np.clip(1 - d, 0, 1) * (0.8 + 0.2 * np.cos(ang * 10))
+        c = col(color)
+        lay = np.zeros((W, W, 4), np.uint8)
         lay[..., :3] = c
-        lay[..., 3] = (a * 150).astype(np.uint8)
-        self.img = Image.alpha_composite(Image.fromarray(lay, "RGBA"), self.img)
+        lay[..., 3] = np.where(v + BAYER * 0.25 > 0.5, 150, np.where(v + BAYER * 0.25 > 0.22, 80, 0))
+        lay[..., 3] = np.where(lay[..., 3] > 0, np.where(CHECK | (v > 0.5), lay[..., 3], 0), 0)
+        self.px = lay
 
     def done(self):
-        return self.img.resize((SIZE, SIZE), Image.LANCZOS)
-
-
-def body(c, top, bottom, trim):
-    """Shared shoulders + torso block."""
-    c.shape(("p", [(0.08, 1.0), (0.12, 0.8), (0.28, 0.69), (0.72, 0.69), (0.88, 0.8), (0.92, 1.0)]), top, bottom)
+        return Image.fromarray(self.px, "RGBA").resize((W * UP, W * UP), Image.NEAREST)
 
 
 # ------------------------------------------------------------------ characters
@@ -204,7 +195,11 @@ def volt():
     c.shape(("p", [(0.3, 0.68), (0.5, 0.82), (0.7, 0.68), (0.74, 0.76), (0.5, 0.94), (0.26, 0.76)]), "#ffe65a", "#d49a00")
     c.flat(("p", [(0.5, 0.78), (0.42, 0.9), (0.49, 0.9), (0.46, 1.0), (0.58, 0.86), (0.51, 0.86), (0.55, 0.78)]), "#2e1066")
     # fists
-    c.shape(("e", (0.0, 0.7, 0.24, 0.96)), "#ff6a6a", "#a31428"); c.shape(("e", (0.76, 0.7, 1.0, 0.96)), "#ff6a6a", "#a31428")
+    for g in ((0.0, 0.66, 0.26, 0.9), (0.74, 0.66, 1.0, 0.9)):
+        c.shape(("e", g), "#ff6a6a", "#a31428")
+        c.shape(("p", [(g[0] + 0.02, 0.88), (g[2] - 0.02, 0.88), (g[2] - 0.02, 1.0), (g[0] + 0.02, 1.0)]), "#ffe65a", "#d49a00", shine=0)
+        for fx in (0.38, 0.5, 0.62):
+            c.line([(g[0] + (g[2] - g[0]) * fx, 0.7), (g[0] + (g[2] - g[0]) * fx, 0.78)], "#7a0c1c", 5)
     # neck + head
     c.shape(("p", [(0.42, 0.56), (0.58, 0.56), (0.6, 0.72), (0.4, 0.72)]), "#d99a74", "#9a5a3c", shine=0)
     c.shape(("p", [(0.3, 0.3), (0.34, 0.2), (0.5, 0.17), (0.66, 0.2), (0.7, 0.3), (0.68, 0.5), (0.6, 0.62), (0.5, 0.66), (0.4, 0.62), (0.32, 0.5)]), "#ffd0a8", "#c47e58", shine=0.25)
@@ -273,10 +268,11 @@ CHARS = {"bastion": bastion, "blaze": blaze, "frost": frost, "volt": volt, "shad
 # ------------------------------------------------------------------ skill icons (white line art, tinted in Godot)
 
 def skill_icons():
-    ic = Icon()  # wall: three brick rows
-    for i, y in enumerate((0.22, 0.42, 0.62)):
-        ic.rrect(0.14, y, 0.86, y + 0.16, 0.03, fill=False, w=int(ic.S * 0.05))
-        ic.erase_line((0.5 if i % 2 == 0 else 0.32, y), (0.5 if i % 2 == 0 else 0.32, y + 0.16), int(ic.S * 0.06))
+    ic = Icon()  # wall: offset brick rows
+    for y, gaps in ((0.2, (0.5,)), (0.42, (0.33, 0.67)), (0.64, (0.5,))):
+        ic.rrect(0.12, y, 0.88, y + 0.17, 0.02)
+        for g in gaps:
+            ic.erase_line((g, y - 0.01), (g, y + 0.18), int(ic.S * 0.05))
     ic.save("sk_wall")
     ic = Icon()  # fire rain: drops
     for x, y in ((0.28, 0.22), (0.62, 0.3), (0.45, 0.58), (0.78, 0.62), (0.2, 0.7)):
@@ -294,20 +290,22 @@ def skill_icons():
             if (r + q) % 2 == 0:
                 ic.rrect(0.14 + q * 0.24, 0.14 + r * 0.24, 0.14 + q * 0.24 + 0.24, 0.14 + r * 0.24 + 0.24, 0.02)
     ic.save("sk_checker")
-    ic = Icon()  # boulder
-    ic.poly([(0.2, 0.7), (0.16, 0.45), (0.34, 0.2), (0.62, 0.16), (0.84, 0.36), (0.82, 0.68), (0.6, 0.84), (0.36, 0.84)])
-    ic.erase_line((0.4, 0.3), (0.5, 0.5), int(ic.S * 0.04)); ic.erase_line((0.5, 0.5), (0.7, 0.55), int(ic.S * 0.04))
+    ic = Icon()  # boulder: the 3x3 block that falls
+    ic.rrect(0.14, 0.14, 0.86, 0.86, 0.05)
+    for v in (0.38, 0.62):
+        ic.erase_line((v, 0.12), (v, 0.88), int(ic.S * 0.035)); ic.erase_line((0.12, v), (0.88, v), int(ic.S * 0.035))
     ic.save("sk_boulder")
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    sheet = Image.new("RGB", (3 * 400, 2 * 400), (18, 14, 34))
+    cell = W * UP
+    sheet = Image.new("RGB", (3 * cell, 2 * cell), (18, 14, 34))
     for i, (cid, fn) in enumerate(CHARS.items()):
         im = fn()
         im.save(os.path.join(OUT, cid + ".png"))
-        im.crop((64, 0, 448, 384)).resize((128, 128), Image.LANCZOS).save(os.path.join(OUT, cid + "_s.png"))
-        sheet.paste(im.resize((400, 400), Image.LANCZOS), ((i % 3) * 400, (i // 3) * 400), im.resize((400, 400), Image.LANCZOS))
+        im.crop((16 * UP, 0, 80 * UP, 64 * UP)).resize((128, 128), Image.NEAREST).save(os.path.join(OUT, cid + "_s.png"))
+        sheet.paste(im, ((i % 3) * cell, (i // 3) * cell), im)
     sheet.save(os.path.join(os.environ.get("SHEET_DIR", "/tmp"), "chars_sheet.png"))
     skill_icons()
     print("characters written to", OUT)
