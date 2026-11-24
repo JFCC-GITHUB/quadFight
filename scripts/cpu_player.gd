@@ -228,8 +228,9 @@ func _lock() -> void:
 ## Drops pending garbage blocks onto random columns. Overflowing the board loses the game.
 func apply_incoming() -> void:
 	for sid in special_in:
+		var ok := Characters.apply(sid, board)  # first: the lightning picks its side here
 		on_special.call(sid)
-		if not Characters.apply(sid, board):
+		if not ok:
 			alive = false
 			special_in.clear()
 			return

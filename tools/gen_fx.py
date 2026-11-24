@@ -249,13 +249,11 @@ def strike(d, c, x, li, rnd):
     return thick_bolt
 
 
-def hit_volt(i):
-    """Two 6-block bolts strike the board's left and right sides (the second one frame later)."""
+def hit_volt(i, x=16):
+    """One bolt strikes the left (x=16) or right (x=48) side of the board."""
     c = ramp("volt")
     im, d = canvas()
-    rnd = random.Random(40 + i)
-    big = strike(d, c, 16, i, rnd)
-    big = strike(d, c, 48, i - 1, rnd) or big
+    strike(d, c, x, i, random.Random(40 + i))
     return outline(im) if 1 <= i <= 5 else im
 
 
@@ -342,6 +340,7 @@ def main():
                 g = f.resize((96, 96), Image.NEAREST)
                 prev.paste(g, (k * 96, row * 96), g)
             row += 1
+    strip([hit_volt(i, 48) for i in range(FR)]).save(os.path.join(OUT, "volt_hit_r.png"))  # the bolt on the right side
     prev.save(os.path.join(os.environ.get("SHEET_DIR", "/tmp"), "fx_sheet.png"))
     print("fx written to", OUT)
 

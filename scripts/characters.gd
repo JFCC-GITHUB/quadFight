@@ -14,7 +14,7 @@ const LIST := [
 	{"id": "frost", "name": "FROST", "color": "58c8f8", "need": {2: 2}, "skill": "ICE SPIKES",
 		"desc": "4-high pillars grow on the two lowest columns."},
 	{"id": "volt", "name": "VOLT", "color": "ffc21a", "need": {1: 1, 3: 1}, "skill": "LIGHTNING",
-		"desc": "Two 8-block lightning bolts strike, left and right."},
+		"desc": "An 8-block lightning bolt strikes the left or the right side."},
 	{"id": "shade", "name": "SHADE", "color": "c040ff", "need": {4: 3}, "skill": "CHECKERS",
 		"desc": "2 hole-punched checkerboard rows rise from below."},
 	{"id": "titan", "name": "TITAN", "color": "a8e83a", "need": {4: 1}, "skill": "BOULDER",
@@ -41,6 +41,7 @@ const DARK_PORTRAITS := {
 	"frost": preload("res://assets/chars/frost_dark.png"), "volt": preload("res://assets/chars/volt_dark.png"),
 	"shade": preload("res://assets/chars/shade_dark.png"), "titan": preload("res://assets/chars/titan_dark.png"),
 }
+const VOLT_HIT_RIGHT := preload("res://assets/fx/volt_hit_r.png")
 const FX_FRAMES := 8
 const FX_CELL := 192  # px of one animation frame in a strip
 
@@ -77,8 +78,11 @@ static func fx_cast(id: String) -> Texture2D:
 	return FX_CAST[base(id)]
 
 
+static var volt_side := 0  # which side the last lightning struck (0 left, 1 right); the hit animation follows it
+
+
 static func fx_hit(id: String) -> Texture2D:
-	return FX_HIT[base(id)]
+	return VOLT_HIT_RIGHT if base(id) == "volt" and volt_side == 1 else FX_HIT[base(id)]
 
 
 static func random_other(id: String) -> String:
@@ -136,7 +140,8 @@ static func apply(id: String, board: Array) -> bool:
 		"volt":
 			var bolt := [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1),
 				Vector2i(1, 2), Vector2i(2, 2), Vector2i(0, 3), Vector2i(1, 3)]
-			return _drop(board, bolt, 1) and _drop(board, bolt, 6)
+			volt_side = randi() % 2
+			return _drop(board, bolt, 1 if volt_side == 0 else 6)
 		"shade":
 			var a: Array = []
 			var b: Array = []
