@@ -26,8 +26,6 @@ const MAX_LOCK_RESETS := 15
 const CLEAR_TIME := 0.38
 const VS_MAX_GRAVITY_LEVEL := 7
 const GARBAGE := 7
-const CPU_PANEL := Rect2(428, 316, 100, 268)
-const CPU_CELL := 9.0
 
 enum State { PLAYING, CLEARING, PAUSED, OVER }
 
@@ -51,6 +49,11 @@ var special_flash := 0.0
 var landscape := false          # 960x540: the portrait layout is scaled and centred, controls sit in the corners
 var view_scale := 1.0
 var view_off := Vector2.ZERO
+var touch_on := true            # on-screen buttons (phones) or keyboard hints (computers)
+var cpu_rect := Rect2()          # the computer's board panel, screen coordinates (never scaled)
+var cpu_cell := 10.0
+var cpu_pad := 0.0
+var cpu_portrait_rect := Rect2()
 var player_portrait: Control
 var cpu_portrait: Control
 
@@ -142,6 +145,22 @@ func _layout() -> void:
 	landscape = size.x > size.y
 	view_scale = 0.86 if landscape else 1.0
 	view_off = Vector2((size.x - 540.0 * view_scale) * 0.5, (size.y - 600.0 * view_scale) * 0.5 - 112.0 * view_scale) if landscape else Vector2.ZERO
+	touch_on = Settings.use_touch()
+	if not landscape:       # right column: the board is as wide as the column
+		cpu_cell = 10.0
+		cpu_pad = 0.0
+		cpu_portrait_rect = Rect2(430, 606, 96, 96)
+	elif touch_on:          # top right, above the buttons
+		cpu_cell = 10.0
+		cpu_pad = 10.0
+		cpu_portrait_rect = Rect2(858, 16, 88, 88)
+	else:                   # no buttons: a big panel on the right
+		cpu_cell = 16.0
+		cpu_pad = 10.0
+		cpu_portrait_rect = Rect2(790, 424, 80, 80)
+	var cw := cpu_cell * COLS + cpu_pad * 2.0
+	var cx := 428.0 if not landscape else (724.0 if touch_on else 742.0)
+	cpu_rect = Rect2(cx, 316.0 if not landscape else 12.0, cw, 40.0 + cpu_cell * ROWS + 44.0)
 
 
 func _view_xf(shake: Vector2 = Vector2.ZERO) -> Transform2D:
@@ -159,9 +178,8 @@ func _place_nodes() -> void:
 	var pr := _to_screen(Rect2(14, 428, 96, 96))
 	player_portrait.position = pr.position
 	player_portrait.size = pr.size
-	var cr := _to_screen(Rect2(430, 594, 96, 96))
-	cpu_portrait.position = cr.position
-	cpu_portrait.size = cr.size
+	cpu_portrait.position = cpu_portrait_rect.position
+	cpu_portrait.size = cpu_portrait_rect.size
 
 
 func _play_fx(tex: Texture2D, rect: Rect2, fps: float) -> void:
@@ -183,7 +201,7 @@ func relayout() -> void:
 
 ## (Re)reads options: touch layout, auto-repeat speed. Called at start and after the options screen.
 func _apply_settings() -> void:
-	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides, landscape)
+	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides, landscape) if touch_on else []
 	_btn_styles.clear()
 	for b in touch_buttons:
 		_btn_styles[b["rect"].position] = [Style.button_box(b["scheme"], false, b["radius"]), Style.button_box(b["scheme"], true, b["radius"])]
@@ -654,8 +672,10 @@ func _on_cpu_clear(n: int, combo_count: int) -> void:
 func _fire_special(from_player: bool) -> void:
 	var id := char_id if from_player else cpu_char
 	var d := Characters.def(id)
-	var at := Rect2(-6, 410, 124, 124) if from_player else Rect2(416, 576, 124, 124)
-	_play_fx(Characters.FX_CAST[id], at, 14.0)
+	if from_player:
+		_play_fx(Characters.FX_CAST[id], Rect2(-6, 410, 124, 124), 14.0)
+	else:
+		fx_layer.play(Characters.FX_CAST[id], cpu_portrait_rect.grow(14.0), 14.0)
 	_popup(d["skill"] + "!", Color(d["color"]))
 	special_flash = 1.0
 	Sfx.play("levelup")
@@ -667,13 +687,16 @@ func _fire_special(from_player: bool) -> void:
 
 ## The player's special landed on the CPU board: hit animation over its mini board.
 func _on_cpu_special(id: String) -> void:
-	_play_fx(Characters.FX_HIT[id], Rect2(418, 431, 120, 120), 12.0)
+	var w := cpu_cell * COLS * 1.33   # the hit sprite is drawn over the mini board, ground line at its bottom
+	var bottom := cpu_rect.position.y + 40.0 + cpu_cell * ROWS
+	fx_layer.play(Characters.FX_HIT[id], Rect2(cpu_rect.get_center().x - w * 0.5, bottom - w * 0.875, w, w), 12.0)
 	_shake(0.2, 3.0)
 	Sfx.play("hit")
 
 
 func _cpu_center() -> Vector2:
-	return Vector2(CPU_PANEL.position.x + 50.0, CPU_PANEL.position.y + 40.0 + CPU_CELL * ROWS * 0.5)
+	var screen_pt := Vector2(cpu_rect.get_center().x, cpu_rect.position.y + 40.0 + cpu_cell * ROWS * 0.5)
+	return (screen_pt - view_off) / view_scale  # projectiles are drawn in view coordinates
 
 
 func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
@@ -977,8 +1000,12 @@ func _draw() -> void:
 	draw_set_transform_matrix(_view_xf())
 	_draw_projectiles()
 	draw_set_transform_matrix(Transform2D.IDENTITY)
-
-	_draw_touch_buttons()
+	if vs:
+		_draw_cpu_panel()
+	if touch_on:
+		_draw_touch_buttons()
+	else:
+		_draw_key_hints()
 
 
 func _draw_header() -> void:
@@ -994,7 +1021,10 @@ func _draw_header() -> void:
 	var rx := size.x - 140.0
 	Style.text(self, cap, Vector2(sx, 42), "SCORE", 16, Style.MUTED, al, sw)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 88), str(int(round(display_score))), 40, Style.TEXT, al, sw, 8)
-	if vs:
+	if vs and landscape:
+		Style.text(self, cap, Vector2(sx, 124), "VS CPU", 16, Style.MUTED, al, sw)
+		Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 152), "Lv %d" % cpu_level, 22, Style.CYAN, al, sw)
+	elif vs:
 		Style.text(self, cap, Vector2(rx, 42), "VS CPU", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
 		Style.text(self, Style.FONT_DISPLAY, Vector2(rx, 74), "Lv %d" % cpu_level, 22, Style.CYAN,
 			HORIZONTAL_ALIGNMENT_RIGHT, 124)
@@ -1035,7 +1065,6 @@ func _draw_side_panels() -> void:
 			Vector2(RIGHT_X + COL_W * 0.5, y), cell, 1.0 if i == 0 else 0.8)
 		y += 86.0 if i == 0 else 72.0
 	if vs:
-		_draw_cpu_panel()
 		_draw_fighters()
 
 
@@ -1059,43 +1088,74 @@ func _draw_fighters() -> void:
 		draw_style_box(Style.panel_box(col if got else Color(0.12, 0.1, 0.25), 6, col.lightened(0.4) if got else Color(col, 0.35)), pr)
 		Style.text(self, Style.FONT_BOLD, pr.position + Vector2(0, 18), str(n), 16,
 			Color(0.06, 0.04, 0.14) if got else Color(col, 0.6), HORIZONTAL_ALIGNMENT_CENTER, 24)
-	var cd := Characters.def(cpu_char)
-	var cc := Color(cd["color"])
-	Style.text(self, Style.FONT_BOLD, Vector2(CPU_PANEL.position.x, 708), cd["name"], 15, cc, HORIZONTAL_ALIGNMENT_CENTER, CPU_PANEL.size.x)
-	var bar := Rect2(CPU_PANEL.position.x + 6, 586, CPU_PANEL.size.x - 12, 5)
-	draw_rect(bar, Color(0, 0, 0, 0.5))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * Characters.progress(cpu_char, cpu_have), bar.size.y)), cc)
 
 
-## Mini view of the computer's board (VS mode).
+## Mini view of the computer's board (VS mode), its fighter and special-attack gauge.
 func _draw_cpu_panel() -> void:
-	var r := CPU_PANEL
+	var r := cpu_rect
 	var cap := Style.caption_font()
 	draw_style_box(Style.panel_box(Style.PANEL, 16, Color(1, 0.45, 0.55, 0.35) if cpu.incoming > 0 else Style.PANEL_BORDER), r)
 	Style.text(self, cap, r.position + Vector2(0, 26), "CPU  LV %d" % cpu_level, 15, Style.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-	var o := r.position + Vector2(5, 40)
-	draw_rect(Rect2(o, Vector2(COLS, ROWS) * CPU_CELL), Color(0, 0, 0, 0.4))
+	var o := r.position + Vector2(cpu_pad, 40)
+	var cell := Vector2(cpu_cell, cpu_cell)
+	draw_rect(Rect2(o, Vector2(COLS, ROWS) * cpu_cell), Color(0, 0, 0, 0.4))
 	for yy in ROWS:
 		for xx in COLS:
 			var v: int = cpu.board[yy][xx]
 			if v >= 0:
-				Style.draw_block(self, v, Rect2(o + Vector2(xx, yy) * CPU_CELL, Vector2(CPU_CELL, CPU_CELL)))
+				Style.draw_block(self, v, Rect2(o + Vector2(xx, yy) * cpu_cell, cell))
 	if cpu.alive:
 		for c in Pieces.cells(cpu.kind, cpu.rot):
 			var q: Vector2i = cpu.pos + c
 			if q.y >= 0:
-				Style.draw_block(self, cpu.kind, Rect2(o + Vector2(q) * CPU_CELL, Vector2(CPU_CELL, CPU_CELL)))
+				Style.draw_block(self, cpu.kind, Rect2(o + Vector2(q) * cpu_cell, cell))
 	else:
-		draw_rect(Rect2(o, Vector2(COLS, ROWS) * CPU_CELL), Color(0, 0, 0, 0.55))
-		Style.text(self, Style.FONT_DISPLAY, o + Vector2(0, 100), "OUT", 22, Style.GOLD,
-			HORIZONTAL_ALIGNMENT_CENTER, COLS * CPU_CELL)
-	var by := o.y + ROWS * CPU_CELL + 20
+		draw_rect(Rect2(o, Vector2(COLS, ROWS) * cpu_cell), Color(0, 0, 0, 0.55))
+		Style.text(self, Style.FONT_DISPLAY, o + Vector2(0, ROWS * cpu_cell * 0.5), "OUT", 22, Style.GOLD,
+			HORIZONTAL_ALIGNMENT_CENTER, COLS * cpu_cell)
+	var by := o.y + ROWS * cpu_cell + 20
 	Style.text(self, Style.FONT_BOLD, Vector2(r.position.x, by), "LINES %d" % cpu.lines, 14, Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 	var warn: bool = cpu.incoming > 0
 	Style.text(self, Style.FONT_BOLD, Vector2(r.position.x, by + 17), "INCOMING %d" % cpu.incoming, 14,
 		Color("ff4d6d") if warn else Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	# fighter: name and gauge under its portrait
+	var cd := Characters.def(cpu_char)
+	var cc := Color(cd["color"])
+	var pr := cpu_portrait_rect
+	var bar := Rect2(pr.position.x + 4, pr.end.y + 4, pr.size.x - 8, 4)
+	draw_rect(bar, Color(0, 0, 0, 0.5))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * Characters.progress(cpu_char, cpu_have), bar.size.y)), cc)
+	Style.text(self, Style.FONT_BOLD, Vector2(pr.position.x, pr.end.y + 20), cd["name"], 15, cc,
+		HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
+
+
+## Computers have no on-screen buttons: show the keys instead (they follow Options -> KEYS).
+func _draw_key_hints() -> void:
+	var acts: Array = Settings.ACTIONS
+	if landscape:
+		_hint_rows(Rect2(12, 176, 232, 336), acts, 42.0)
+	else:
+		_hint_rows(Rect2(12, 740, 252, 192), acts.slice(0, 4), 48.0)
+		_hint_rows(Rect2(276, 740, 252, 192), acts.slice(4), 48.0)
+
+
+func _hint_rows(r: Rect2, acts: Array, row_h: float) -> void:
+	draw_style_box(Style.panel_box(Color(0, 0, 0, 0.3), 14, Color(1, 1, 1, 0.1)), r.grow(6))
+	for i in acts.size():
+		var y := r.position.y + i * row_h
+		Style.text(self, Style.caption_font(), Vector2(r.position.x + 6, y + row_h * 0.62), acts[i][1], 13, Style.MUTED)
+		var x := r.end.x - 6.0
+		var codes: Array = Settings.key_slots(acts[i][0]).filter(func(c): return c != 0).slice(0, 2)
+		codes.reverse()
+		for code in codes:
+			var label: String = Settings.key_name(code)
+			var w := maxf(32.0, Style.FONT_BOLD.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 18.0)
+			var keycap := Rect2(x - w, y + row_h * 0.5 - 15.0, w, 30.0)
+			draw_style_box(Style.panel_box(Color(0.2, 0.2, 0.36), 7, Color(1, 1, 1, 0.45)), keycap)
+			Style.text(self, Style.FONT_BOLD, keycap.position + Vector2(0, 21), label, 15, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
+			x -= w + 6.0
 
 
 func _draw_board() -> void:
