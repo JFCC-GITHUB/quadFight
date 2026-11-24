@@ -10,9 +10,14 @@ const ROWS := 20
 const LOCK_DELAY := 0.5
 const GARBAGE := 7  # board value of a garbage block
 
+const MAX_LEVEL := 20
 const NAMES := ["Rookie", "Beginner", "Casual", "Regular", "Skilled",
-	"Advanced", "Expert", "Master", "Elite", "Boss"]
-const MISTAKE := [0.40, 0.33, 0.27, 0.22, 0.18, 0.14, 0.11, 0.08, 0.05, 0.03]
+	"Advanced", "Expert", "Master", "Elite", "Boss",
+	"Veteran", "Champion", "Prodigy", "Phantom", "Legend",
+	"Mythic", "Overlord", "Demigod", "Cosmic", "Perfect"]
+const MISTAKE := [0.40, 0.33, 0.27, 0.22, 0.18, 0.14, 0.11, 0.08, 0.05, 0.03,
+	0.02, 0.015, 0.01, 0.007, 0.005, 0.003, 0.002, 0.001, 0.0005, 0.0]
+const LOOKAHEAD_FROM := 11  # from this level on, placements are chosen with the next piece in mind
 const MAX_GRAVITY_LEVEL := 7  # VS mode: gravity stops speeding up here
 
 var level := 3
@@ -40,16 +45,19 @@ var failed_moves := 0
 var on_clear: Callable = func(_rows, _combo): pass   # (rows_cleared: int, combo: int)
 var on_hit: Callable = func(_n): pass                # garbage landed (count)
 var on_special: Callable = func(_id): pass           # a special attack landed (character id)
+var aim := false          # steer the stack toward the clears its special attack needs
+var want: Dictionary = {}  # clear size -> how many more of it the special needs
 var rng := RandomNumberGenerator.new()
 
 
 ## Timing and mistake rate for a level (also used by the level-select screen).
 static func params(lv: int) -> Dictionary:
 	var t := clampf(float(lv - 1) / 9.0, 0.0, 1.0)
+	var u := clampf(float(lv - 10) / 10.0, 0.0, 1.0)  # levels 11-20 keep getting faster
 	return {
-		"think": lerpf(1.6, 0.35, pow(t, 0.8)),     # reaction time after a piece appears (s)
-		"act": lerpf(0.7, 0.16, pow(t, 0.8)),      # time per rotate / shift (s)
-		"mistake": MISTAKE[clampi(lv - 1, 0, 9)],   # chance to pick a bad placement
+		"think": lerpf(lerpf(1.6, 0.35, pow(t, 0.8)), 0.04, u),     # reaction time after a piece appears (s)
+		"act": lerpf(lerpf(0.7, 0.16, pow(t, 0.8)), 0.025, u),      # time per rotate / shift (s)
+		"mistake": MISTAKE[clampi(lv - 1, 0, MAX_LEVEL - 1)],       # chance to pick a bad placement
 	}
 
 
@@ -127,13 +135,14 @@ func _do_action() -> void:
 		_hard_drop()
 
 
-func _collides(k: int, r: int, p: Vector2i) -> bool:
+func _collides(k: int, r: int, p: Vector2i, bd: Array = []) -> bool:
+	var b: Array = board if bd.is_empty() else bd
 	for c in Pieces.cells(k, r):
 		var x: int = p.x + c.x
 		var y: int = p.y + c.y
 		if x < 0 or x >= COLS or y >= ROWS:
 			return true
-		if y >= 0 and board[y][x] != -1:
+		if y >= 0 and b[y][x] != -1:
 			return true
 	return false
 
@@ -246,21 +255,56 @@ func apply_incoming() -> void:
 
 # ---------------------------------------------------------------- AI
 
-func _make_plan(mistake: float) -> void:
-	var cands: Array = []
-	for r in (1 if kind == 1 else 4):
+func _placements(k: int, bd: Array) -> Array:
+	var out: Array = []
+	for r in (1 if k == 1 else 4):
 		var minx := 99
 		var maxx := -99
-		for c in Pieces.cells(kind, r):
+		for c in Pieces.cells(k, r):
 			minx = mini(minx, c.x)
 			maxx = maxi(maxx, c.x)
 		for x in range(-minx, COLS - maxx):
 			var p := Vector2i(x, -1)
-			if _collides(kind, r, p):
+			if _collides(k, r, p, bd):
 				continue
-			while not _collides(kind, r, p + Vector2i(0, 1)):
+			while not _collides(k, r, p + Vector2i(0, 1), bd):
 				p.y += 1
-			cands.append([_evaluate(kind, r, p), r, x])
+			out.append([r, x, p])
+	return out
+
+
+func _make_plan(mistake: float) -> void:
+	var cands: Array = []
+	for pl in _placements(kind, board):
+		var ev := _eval_on(board, kind, pl[0], pl[2])
+		var in_well := false
+		for c in Pieces.cells(kind, pl[0]):
+			if pl[2].x + c.x == COLS - 1:
+				in_well = true
+		cands.append([ev[0], pl[0], pl[1], ev[1], in_well, ev[2]])
+	if aim and want.get(4, 0) > 0 and _max_height(board) < 11:
+		# quad stacking: the last column stays an open well; only an I piece that clears four goes in
+		var keep: Array = []
+		for c in cands:
+			if not c[4] or (kind == 0 and c[5] == 4):
+				keep.append(c)
+		if not keep.is_empty():
+			cands = keep
+	if level >= LOOKAHEAD_FROM and not queue.is_empty() and cands.size() > 1:
+		# two-piece lookahead on the best few placements: add the best score of the next piece
+		cands.sort_custom(func(a, b): return a[0] > b[0])
+		var top := mini(6, cands.size())
+		var lowest := 1e9
+		for i in top:
+			var best := -1e9
+			for pl in _placements(queue[0], cands[i][3]):
+				best = maxf(best, _eval_on(cands[i][3], queue[0], pl[0], pl[2])[0])
+			if best <= -1e9:
+				best = -100.0  # no room for the next piece
+			cands[i][0] += best
+			lowest = minf(lowest, best)
+		for i in range(top, cands.size()):
+			cands[i][0] += lowest - 1.0  # not looked at: keep them below the examined ones
 	if cands.is_empty():
 		has_plan = true
 		plan_rot = rot
@@ -283,10 +327,10 @@ func _make_plan(mistake: float) -> void:
 	has_plan = true
 
 
-## Heuristic: low stack, few holes, flat surface, clear lines.
-func _evaluate(k: int, r: int, p: Vector2i) -> float:
+## Heuristic: low stack, few holes, flat surface, clear lines. Returns [score, board after the move].
+func _eval_on(bd: Array, k: int, r: int, p: Vector2i) -> Array:
 	var tb: Array = []
-	for row in board:
+	for row in bd:
 		tb.append(row.duplicate())
 	for c in Pieces.cells(k, r):
 		var q: Vector2i = p + c
@@ -325,4 +369,24 @@ func _evaluate(k: int, r: int, p: Vector2i) -> float:
 	var score := -0.51 * agg + 0.76 * cleared + 0.2 * cleared * cleared - 0.36 * holes - 0.18 * bump
 	if maxh > 14:
 		score -= 0.6 * (maxh - 14)
-	return score
+	if aim and not want.is_empty():
+		score += _aim_bonus(cleared, maxh)
+	return [score, tb, cleared]
+
+
+## Pulls the placement choice toward the clears the special attack needs.
+func _aim_bonus(cleared: int, maxh: int) -> float:
+	if cleared == 0:
+		return 0.0
+	if want.get(cleared, 0) > 0:
+		return 1.4 + 0.5 * cleared
+	# a clear that does not help: skip it while the stack is low
+	return -(0.76 * cleared + 0.2 * cleared * cleared + 0.8) if maxh < 12 else 0.0
+
+
+func _max_height(bd: Array) -> int:
+	for y in ROWS:
+		for v in bd[y]:
+			if v != -1:
+				return ROWS - y
+	return 0

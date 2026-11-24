@@ -55,6 +55,11 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   operations shared by player and CPU), `char_select.gd` (after the level picker), `portrait.gd` / `fx_layer.gd`
   (nearest-filtered pixel art + 8-frame strip animations). Art comes from `tools/gen_characters.py` (96px pixel busts,
   5x nearest) and `tools/gen_fx.py` (`assets/fx/<char>_<cast|hit>.png`); re-run them and `godot --headless --import`.
+- VS modes: LADDER (one opponent, `Main.run` level +1 per win) and TOURNAMENT (the 5 other fighters, shuffled, one level
+  harder each, lose once = out). `Main.start_run` / `next_fight` / `show_match` drive both; `vs_select.gd` (level stepper,
+  CPU special setting: NEVER / NORMAL / AIM), `char_select.gd` (step 0 you, step 1 opponent or RANDOM), `intro.gd` (versus
+  intro between fights + champion screen). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
+  ahead; `aim` + `want` make it steer toward the clears its special needs (quad recipes stay rare).
 - Landscape (phones turned sideways): `main.gd` switches the window's `content_scale_size` between 540x960 and 960x540
   (the game, title, level and fighter screens have a landscape layout and a `relayout()` that rebuilds them on rotation;
   ranking and options stay portrait, options inside a landscape screen is scaled to fit). `fullscreen.gd` is the full-screen

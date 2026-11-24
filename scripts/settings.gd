@@ -5,6 +5,7 @@ const PATH := "user://settings.cfg"
 const DAS := [0.17, 0.13, 0.09]  # delay before auto-repeat: slow / normal / fast
 const ARR := [0.05, 0.035, 0.02]  # auto-repeat interval
 const KEY_SLOTS := 3
+const MAX_LEVEL := 20  # CPU levels
 ## Rebindable keyboard actions: [action, label].
 const ACTIONS := [["move_left", "MOVE LEFT"], ["move_right", "MOVE RIGHT"], ["soft_drop", "SOFT DROP"],
 	["hard_drop", "HARD DROP"], ["rotate_cw", "ROTATE"], ["rotate_ccw", "ROTATE BACK"], ["hold", "HOLD"],
@@ -34,6 +35,9 @@ var control_mode := "auto"  # "auto" | "touch" | "keys": on-screen buttons or ke
 var keys := {}  # action -> [3 physical keycodes] overriding DEFAULT_KEYS
 # VS CPU
 var vs_level := 3
+var vs_cpu_char := "random"   # the opponent in LADDER: a fighter id or "random"
+var cpu_special := 1          # does the CPU use its special attack: 0 never, 1 when it happens, 2 aims for it
+var tour_clears := 0          # tournaments won
 var vs_char := "bastion"
 var vs_record := {}  # cpu level (int) -> [wins, losses]
 
@@ -60,9 +64,12 @@ func _ready() -> void:
 	swap_sides = cfg.get_value("controls", "swap_sides", swap_sides)
 	move_speed = clampi(cfg.get_value("controls", "move_speed", move_speed), 0, 2)
 	ghost = cfg.get_value("controls", "ghost", ghost)
-	vs_level = clampi(cfg.get_value("vs", "level", vs_level), 1, 10)
+	vs_level = clampi(cfg.get_value("vs", "level", vs_level), 1, MAX_LEVEL)
+	vs_cpu_char = cfg.get_value("vs", "cpu_char", vs_cpu_char)
+	cpu_special = clampi(cfg.get_value("vs", "cpu_special", cpu_special), 0, 2)
+	tour_clears = int(cfg.get_value("vs", "tour_clears", tour_clears))
 	vs_char = cfg.get_value("vs", "char", vs_char)
-	for lv in range(1, 11):
+	for lv in range(1, MAX_LEVEL + 1):
 		vs_record[lv] = [int(cfg.get_value("vs", "w%d" % lv, 0)), int(cfg.get_value("vs", "l%d" % lv, 0))]
 
 
@@ -148,6 +155,9 @@ func save() -> void:
 	cfg.set_value("controls", "move_speed", move_speed)
 	cfg.set_value("controls", "ghost", ghost)
 	cfg.set_value("vs", "level", vs_level)
+	cfg.set_value("vs", "cpu_char", vs_cpu_char)
+	cfg.set_value("vs", "cpu_special", cpu_special)
+	cfg.set_value("vs", "tour_clears", tour_clears)
 	cfg.set_value("vs", "char", vs_char)
 	for lv in vs_record:
 		cfg.set_value("vs", "w%d" % lv, vs_record[lv][0])
