@@ -10,6 +10,7 @@ var _banks := {}  # sfx style -> {sound name -> stream}
 var _players: Array = []
 var _music: AudioStreamPlayer
 var _music_style := ""
+var _theme := ""  # a fighter theme overrides the chosen style (tournament fights)
 var _preview: AudioStreamPlayer
 var _preview_token := 0
 var _music_wanted := false
@@ -47,7 +48,9 @@ func play(sound: String) -> void:
 	player.play()
 
 
-func start_music() -> void:
+## `theme`: a fighter id to play that fighter's own music instead of the chosen style ("" = the chosen style).
+func start_music(theme: String = "") -> void:
+	_theme = theme
 	_music_wanted = true
 	if not Settings.music_on:
 		return
@@ -58,10 +61,15 @@ func start_music() -> void:
 
 ## Loads the OGG for the selected style (looping) into the music player if needed.
 func _ensure_style() -> void:
-	if _music_style == Settings.music_style and _music.stream != null:
+	var id := _current_id()
+	if _music_style == id and _music.stream != null:
 		return
-	_music.stream = _load_style(Settings.music_style)
-	_music_style = Settings.music_style
+	_music.stream = _load_style(id)
+	_music_style = id
+
+
+func _current_id() -> String:
+	return "theme_" + _theme if _theme != "" else Settings.music_style
 
 
 func _load_style(id: String) -> AudioStream:
@@ -76,8 +84,8 @@ func _load_style(id: String) -> AudioStream:
 ## Call after the style option changed: swaps the track if music is supposed to be playing.
 func refresh_music_style() -> void:
 	if _music_wanted and Settings.music_on:
-		_music.stream = _load_style(Settings.music_style)
-		_music_style = Settings.music_style
+		_music.stream = _load_style(_current_id())
+		_music_style = _current_id()
 		_music.play()
 
 

@@ -84,6 +84,10 @@ Songs are bars of 16th steps (`"A4:2 C5:2 r:4"`), voices are additive-synth func
 bass, pads, drums), the tail is folded onto the start for a seamless loop. We cannot listen here, so check
 by rendering, then verify length / peak (<0.95 after OGG) / seam, and look at a spectrogram; ask the owner to listen.
 
+Fighter themes: `tools/gen_themes.py` (reuses gen_music voices; `python3 tools/gen_themes.py [fighter]`) writes
+`assets/music/theme_<fighter>.ogg`, one original loop per fighter. They are not in `styles.json`; `Sfx.start_music(fighter)`
+plays one instead of the chosen style (used by TOURNAMENT fights, `game.gd`).
+
 ## Verifying changes
 - Headless logic test: a temporary scene with a test script, run
   `godot --headless --path . res://tmp_test.tscn` (autoloads are not available with `--script`).
