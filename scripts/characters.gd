@@ -15,7 +15,7 @@ const LIST := [
 		"desc": "4-high pillars grow on the two lowest columns."},
 	{"id": "volt", "name": "VOLT", "color": "ffc21a", "need": {1: 1, 3: 1}, "skill": "LIGHTNING",
 		"desc": "Two 8-block lightning bolts strike, left and right."},
-	{"id": "shade", "name": "SHADE", "color": "c040ff", "need": {1: 1, 2: 2}, "skill": "CHECKERS",
+	{"id": "shade", "name": "SHADE", "color": "c040ff", "need": {4: 3}, "skill": "CHECKERS",
 		"desc": "2 hole-punched checkerboard rows rise from below."},
 	{"id": "titan", "name": "TITAN", "color": "a8e83a", "need": {4: 1}, "skill": "BOULDER",
 		"desc": "A huge 5x5 boulder slams down in the middle."},
