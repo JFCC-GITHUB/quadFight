@@ -213,36 +213,47 @@ def bolt(rnd, x0, y0, x1, y1, seg=7, jit=7):
     return pts
 
 
+def strike(d, c, x, li, rnd):
+    """One lightning bolt at column x, li = frames since it started (0 spark ... 6 afterglow)."""
+    if li < 0:
+        return False
+    thick_bolt = li in (2, 3)
+    if li == 0:
+        star(d, x, 4, 3, c[0]); disc(d, x, 3, 2, c[1])
+    elif li <= 4:
+        bot = 28 if li == 1 else GROUND
+        pts = bolt(rnd, x, 0, x + rnd.randint(-3, 3), bot, seg=7, jit=6)
+        w = 5 if thick_bolt else 3
+        thick(d, pts, w + 2, c[3]); thick(d, pts, w, c[2]); thick(d, pts, max(1, w - 3), c[0])
+        if li >= 3:
+            for bx in (-1, 1):
+                k = rnd.randint(2, 3)
+                br = bolt(rnd, pts[k][0], pts[k][1], pts[k][0] + bx * 9, pts[k][1] + 14, seg=5, jit=2)
+                thick(d, br, 3, c[2]); thick(d, br, 1, c[0])
+        if li >= 2:
+            disc(d, x, GROUND, 9 - (li - 2) * 2, c[0] if li == 2 else c[1])
+            ring(d, x, GROUND, 4 + (li - 2) * 5, 2, c[2])
+    elif li <= 6:
+        k = (li - 5) / 1.5
+        for sdir in (-1, 1):
+            for j in range(2):
+                bx = x + sdir * (5 + j * 6 + k * 4)
+                pts = bolt(rnd, bx, GROUND, bx + sdir * 4, GROUND - 5 - j * 3, seg=3, jit=2)
+                thick(d, pts, 1 if k > 0.5 else 2, c[1])
+    else:
+        for j in range(5):
+            d.point((x + rnd.randint(-10, 10), rnd.randint(40, 56)), fill=c[0])
+    return thick_bolt
+
+
 def hit_volt(i):
-    t = i / (FR - 1)
+    """Two 6-block bolts strike the board's left and right sides (the second one frame later)."""
     c = ramp("volt")
     im, d = canvas()
     rnd = random.Random(40 + i)
-    if i == 0:
-        star(d, 32, 4, 3, c[0]); disc(d, 32, 3, 2, c[1])
-    elif i <= 5:
-        top, bot = 0, (30 if i == 1 else GROUND)
-        pts = bolt(rnd, 32, top, 32 + rnd.randint(-3, 3), bot)
-        w = 5 if i in (2, 3) else 3
-        thick(d, pts, w + 2, c[3]); thick(d, pts, w, c[2]); thick(d, pts, max(1, w - 3), c[0])
-        if i >= 3:
-            for bx in (-1, 1):
-                k = rnd.randint(2, 3)
-                b = bolt(rnd, pts[k][0], pts[k][1], pts[k][0] + bx * 18, pts[k][1] + 16, seg=5, jit=3)
-                thick(d, b, 3, c[2]); thick(d, b, 1, c[0])
-        if i >= 2:
-            disc(d, 32, GROUND, 12 - (i - 2) * 2.5, c[0] if i == 2 else c[1])
-            ring(d, 32, GROUND, 6 + (i - 2) * 6, 2, c[2])
-    else:
-        k = (i - 5) / 2
-        for s in (-1, 1):
-            for j in range(3):
-                bx = 32 + s * (10 + j * 8 + k * 6)
-                pts = bolt(rnd, bx, GROUND, bx + s * 5, GROUND - 6 - j * 3, seg=3, jit=2)
-                thick(d, pts, 1 if k > 0.5 else 2, c[1])
-        for j in range(10 - i):
-            d.point((rnd.randint(10, 54), rnd.randint(30, 56)), fill=c[0])
-    return outline(im) if i in (2, 3, 4) else im
+    big = strike(d, c, 16, i, rnd)
+    big = strike(d, c, 48, i - 1, rnd) or big
+    return outline(im) if 1 <= i <= 5 else im
 
 
 def hit_shade(i):
