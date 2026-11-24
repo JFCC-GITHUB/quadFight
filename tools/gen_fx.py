@@ -121,10 +121,13 @@ def cast(name, i):
 
 # ------------------------------------------------------------------ hit (landing) effects
 
+SAND = [rgb(h) for h in ("#fff3d0", "#e8c880", "#b88a4a", "#6a4a2a")]  # the wall is stone and sand, not water
+
+
 def hit_bastion(i):
     """A heavy slab falls, bursts into sand and settles as a mound over the stack."""
     t = i / (FR - 1)
-    c = ramp("bastion")
+    c = SAND
     im, d = canvas()
     rnd = random.Random(9)
     if t < 0.3:
@@ -290,15 +293,15 @@ def hit_titan(i):
     c = ramp("titan")
     im, d = canvas()
     p = clamp(t / 0.4)
-    size = 26
+    size = 32  # 5 board cells (a cell is 6.4 sprite pixels)
     y0 = -size + p * p * (GROUND - size + size) if t < 0.4 else GROUND - size
     sh = 0 if t < 0.4 else (1 if i in (3, 5) else 0)
     x0 = 32 - size // 2 + sh
     y0 = int(y0)
     d.rectangle((x0, y0, x0 + size, y0 + size), fill=c[2])
-    for k in range(1, 3):
-        d.line((x0 + k * size // 3, y0, x0 + k * size // 3, y0 + size), fill=c[3])
-        d.line((x0, y0 + k * size // 3, x0 + size, y0 + k * size // 3), fill=c[3])
+    for k in range(1, 5):
+        d.line((x0 + k * size // 5, y0, x0 + k * size // 5, y0 + size), fill=c[3])
+        d.line((x0, y0 + k * size // 5, x0 + size, y0 + k * size // 5), fill=c[3])
     d.line((x0, y0, x0 + size, y0), fill=c[0]); d.line((x0, y0, x0, y0 + size), fill=c[1])
     d.line((x0 + 3, y0 + 3, x0 + 8, y0 + 9), fill=c[0]) if t > 0.4 else None
     im = outline(im)
