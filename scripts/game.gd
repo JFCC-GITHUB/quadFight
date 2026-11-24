@@ -11,6 +11,7 @@ const CpuPlayer := preload("res://scripts/cpu_player.gd")
 const Characters := preload("res://scripts/characters.gd")
 const Portrait := preload("res://scripts/portrait.gd")
 const FxLayer := preload("res://scripts/fx_layer.gd")
+const Fullscreen := preload("res://scripts/fullscreen.gd")
 
 const COLS := 10
 const ROWS := 20
@@ -788,6 +789,8 @@ func _toggle_pause() -> void:
 		UI.button(c, "RESUME", Rect2(40, 116, 320, 92), _toggle_pause, 32, Style.BTN_PRIMARY, "play")
 		UI.button(c, "OPTIONS", Rect2(40, 224, 320, 78), _open_options, 26, Style.BTN_GLASS, "gear")
 		UI.button(c, "MENU", Rect2(40, 318, 320, 78), func(): main.show_title(), 26, Style.BTN_GLASS, "home")
+		UI.icon_button(c, "fullscreen_exit" if Fullscreen.active() else "fullscreen", Rect2(340, 18, 48, 48),
+			func(): Fullscreen.toggle(self), Style.BTN_GLASS)
 	elif state == State.PAUSED:
 		state = paused_from
 		Sfx.pause_music(false)

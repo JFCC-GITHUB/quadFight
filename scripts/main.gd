@@ -21,7 +21,7 @@ func _ready() -> void:
 
 
 func show_title() -> void:
-	_swap(TitleScreen.new())
+	_swap(TitleScreen.new(), true)
 
 
 func show_game(vs: bool = false, cpu_level: int = 3) -> void:
@@ -33,13 +33,13 @@ func show_game(vs: bool = false, cpu_level: int = 3) -> void:
 
 
 func show_vs_select() -> void:
-	_swap(VsSelectScreen.new())
+	_swap(VsSelectScreen.new(), true)
 
 
 func show_char_select(cpu_level: int) -> void:
 	var s := CharSelectScreen.new()
 	s.cpu_level = cpu_level
-	_swap(s)
+	_swap(s, true)
 
 
 func show_leaderboard() -> void:

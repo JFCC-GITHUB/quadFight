@@ -56,7 +56,9 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   (nearest-filtered pixel art + 8-frame strip animations). Art comes from `tools/gen_characters.py` (96px pixel busts,
   5x nearest) and `tools/gen_fx.py` (`assets/fx/<char>_<cast|hit>.png`); re-run them and `godot --headless --import`.
 - Landscape (phones turned sideways): `main.gd` switches the window's `content_scale_size` between 540x960 and 960x540
-  (only the game screen has a landscape layout; menus stay portrait, pillarboxed). `game.gd` draws its portrait
+  (the game, title, level and fighter screens have a landscape layout and a `relayout()` that rebuilds them on rotation;
+  ranking and options stay portrait, options inside a landscape screen is scaled to fit). `fullscreen.gd` is the full-screen
+  button helper (iPhone Safari has no Fullscreen API: it shows an Add to Home Screen hint). `game.gd` draws its portrait
   layout through a scale+offset transform (`_layout`, `_view_xf`, `_to_screen`) and `TouchLayout.buttons(..., landscape)`
   moves the control clusters to the bottom corners; `relayout()` runs on rotation without losing the game.
 - Phone vs computer: `Settings.use_touch()` (web: `pointer: coarse`; override in Options -> KEYS "controls shown in game")

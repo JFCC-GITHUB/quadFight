@@ -7,6 +7,8 @@ const FONT_SEMI := preload("res://assets/fonts/Rajdhani-SemiBold.ttf")
 
 const LOGO := preload("res://assets/logo.png")
 const ICONS := {
+	"fullscreen": preload("res://assets/icons/fullscreen.png"),
+	"fullscreen_exit": preload("res://assets/icons/fullscreen_exit.png"),
 	"left": preload("res://assets/icons/left.png"),
 	"right": preload("res://assets/icons/right.png"),
 	"up": preload("res://assets/icons/up.png"),

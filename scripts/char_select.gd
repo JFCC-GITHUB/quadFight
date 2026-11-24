@@ -18,12 +18,21 @@ var time := 0.0
 var fx: Control
 var preview_t := 0.0
 var cards: Array = []
+var land := false
 
 
 func _ready() -> void:
 	for i in Characters.LIST.size():
 		if Characters.LIST[i]["id"] == Settings.vs_char:
 			selected = i
+	_build()
+
+
+func _build() -> void:
+	for c in get_children():
+		c.queue_free()
+	land = size.x > size.y
+	cards.clear()
 	for i in Characters.LIST.size():
 		var r := _card_rect(i)
 		var b := Button.new()
@@ -43,12 +52,22 @@ func _ready() -> void:
 	fx = FxLayer.new()
 	fx.size = size
 	add_child(fx)
-	UI.button(self, "START", Rect2(110, 832, 320, 94), _start, 38, Style.BTN_PRIMARY, "swords")
+	if land:
+		UI.button(self, "START", Rect2(716, 436, 224, 80), _start, 34, Style.BTN_PRIMARY, "swords")
+	else:
+		UI.button(self, "START", Rect2(110, 832, 320, 94), _start, 38, Style.BTN_PRIMARY, "swords")
 	UI.icon_button(self, "left", Rect2(16, 24, 56, 56), func(): main.show_vs_select(), Style.BTN_GLASS)
 	_select(selected)
 
 
+## Called by Main when the window is rotated.
+func relayout() -> void:
+	_build()
+
+
 func _card_rect(i: int) -> Rect2:
+	if land:  # 3 columns x 2 rows on the left, details on the right
+		return Rect2(24 + (i % 3) * 230.0, 100 + (i / 3) * 170.0, 220, 160)
 	return Rect2(26 + (i % 2) * (CARD_W + 12), 128 + (i / 2) * (CARD_H + 10), CARD_W, CARD_H)
 
 
@@ -57,7 +76,7 @@ func _select(i: int) -> void:
 	preview_t = 0.0
 	var id: String = Characters.LIST[i]["id"]
 	fx.clear()
-	fx.play(Characters.FX_HIT[id], Rect2(400, 708, 120, 120), 10.0, true)
+	fx.play(Characters.FX_HIT[id], Rect2(780, 304, 120, 120) if land else Rect2(400, 708, 120, 120), 10.0, true)
 	queue_redraw()
 
 
@@ -99,9 +118,9 @@ func _draw_pips(id: String, at: Vector2, sz: float, col: Color) -> void:
 
 
 func _draw() -> void:
-	draw_texture_rect(Style.bg_texture(), Rect2(Vector2.ZERO, size), false)
+	Style.draw_bg(self, size)
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.3))
-	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 82), "CHOOSE FIGHTER", 36, Style.TEXT,
+	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 74 if land else 82), "CHOOSE FIGHTER", 36, Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
 	for i in Characters.LIST.size():
 		var d: Dictionary = Characters.LIST[i]
@@ -111,16 +130,23 @@ func _draw() -> void:
 		var border := col if on else Style.PANEL_BORDER
 		var glow := Color(col, 0.45 + 0.2 * sin(time * 5.0)) if on else Color(0, 0, 0, 0)
 		draw_style_box(Style.panel_box(Color(0.1, 0.07, 0.22, 0.92) if on else Style.PANEL, 18, border, glow, 18 if on else 0), r)
-		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(130, 52), d["name"], 22, col if on else Style.TEXT)
-		Style.text(self, Style.caption_font(), r.position + Vector2(130, 76), d["skill"], 13, Style.MUTED)
-		_draw_pips(d["id"], r.position + Vector2(130, 92), 24.0, col)
+		var tx := 124.0 if land else 130.0
+		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(tx, 52), d["name"], 20 if land else 22, col if on else Style.TEXT)
+		Style.text(self, Style.caption_font(), r.position + Vector2(tx, 76), d["skill"], 13, Style.MUTED)
+		_draw_pips(d["id"], r.position + Vector2(tx, 92), 22.0 if land else 24.0, col)
 
 	# details
 	var d: Dictionary = Characters.LIST[selected]
 	var col := Color(d["color"])
-	var box := Rect2(26, 700, 488, 128)
+	var box := Rect2(716, 100, 224, 320) if land else Rect2(26, 700, 488, 128)
 	draw_style_box(Style.panel_box(Style.PANEL, 22, Color(col, 0.7), Color(col, 0.18), 20), box)
-	Style.text(self, Style.FONT_DISPLAY, Vector2(44, 738), d["skill"], 26, col)
-	_draw_pips(d["id"], Vector2(44, 750), 26.0, col)
-	Style.text(self, Style.FONT_SEMI, Vector2(44, 806), "Clears add up in any order.", 14, Style.MUTED)
-	Style.text(self, Style.FONT_SEMI, Vector2(44, 822), d["desc"], 13, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT, 350)
+	var bx := box.position.x + 18.0
+	Style.text(self, Style.FONT_DISPLAY, Vector2(bx, box.position.y + 38), d["skill"], 24 if land else 26, col)
+	_draw_pips(d["id"], Vector2(bx, box.position.y + 50), 26.0, col)
+	if land:
+		Style.text(self, Style.FONT_SEMI, Vector2(bx, box.position.y + 108), "Clears add up in any order.", 12, Style.MUTED)
+		draw_multiline_string(Style.FONT_SEMI, Vector2(bx, box.position.y + 128), d["desc"], HORIZONTAL_ALIGNMENT_LEFT,
+			box.size.x - 36.0, 13, 4, Style.TEXT)
+	else:
+		Style.text(self, Style.FONT_SEMI, Vector2(bx, 806), "Clears add up in any order.", 14, Style.MUTED)
+		Style.text(self, Style.FONT_SEMI, Vector2(bx, 822), d["desc"], 13, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT, 350)
