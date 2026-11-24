@@ -50,6 +50,8 @@ var cpu_have: Dictionary = {}
 var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
 var fx_layer: Control
 var special_flash := 0.0
+var cont_label: Label          # the tournament continue countdown (null when not shown)
+var cont_time := 0.0
 var landscape := false          # 960x540: the portrait layout is scaled and centred, controls sit in the corners
 var view_scale := 1.0
 var view_off := Vector2.ZERO
@@ -245,7 +247,10 @@ func _input(event: InputEvent) -> void:
 		if entering_name:
 			_name_input(event)
 		elif event.is_action_pressed("confirm"):
-			if vs:
+			if vs and mode == "tournament":
+				if cont_label != null:
+					main.continue_fight()  # Enter = CONTINUE; a finished fight is left to the buttons
+			elif vs:
 				main.show_match()
 			else:
 				main.show_game()
@@ -351,6 +356,12 @@ func _notification(what: int) -> void:
 
 func _process(delta: float) -> void:
 	time += delta
+	if cont_label != null:
+		cont_time -= delta
+		cont_label.text = str(maxi(ceili(cont_time), 0))
+		if cont_time <= 0.0:
+			cont_label = null
+			_vs_result(false)
 	_update_effects(delta)
 	match state:
 		State.PLAYING:
@@ -773,6 +784,29 @@ func _vs_end(won: bool) -> void:
 	Sfx.stop_music()
 	Sfx.play("win" if won else "lose")
 	_shake(0.4, 6.0)
+	if mode == "tournament" and not won and main.run.get("credits", 0) > 0:
+		_continue_prompt()
+		return
+	_vs_result(won)
+
+
+## Tournament, lost with continues left: a 10 second countdown like an arcade cabinet.
+func _continue_prompt() -> void:
+	var c := _open_overlay(Rect2(50, 230, 440, 480))
+	UI.label(c, "CONTINUE?", Rect2(0, 30, 440, 70), 46, Style.GOLD, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	cont_time = 10.0
+	cont_label = UI.label(c, "10", Rect2(0, 100, 440, 130), 110, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+	var foe: String = Characters.def(cpu_char)["name"]
+	UI.label(c, "Fight %d of %d   vs %s" % [round_no, round_total, foe], Rect2(0, 236, 440, 34), 18, Style.MUTED,
+		HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
+	UI.button(c, "CONTINUE  (%d left)" % main.run["credits"], Rect2(40, 290, 360, 88), func(): main.continue_fight(), 28,
+		Style.BTN_PRIMARY, "retry")
+	UI.button(c, "GIVE UP", Rect2(40, 392, 360, 70), func():
+		cont_label = null
+		_vs_result(false), 22, Style.BTN_GLASS, "home")
+
+
+func _vs_result(won: bool) -> void:
 	var tour := mode == "tournament"
 	if not tour:
 		Settings.add_vs_result(cpu_level, won)

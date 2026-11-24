@@ -62,6 +62,11 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   `dark_<fighter>`, art `assets/chars/<fighter>_dark.png` from `dark_variant()` in gen_characters.py, `Characters.base/def/
   portrait` resolve it; it plays your theme slower/lower and aims for its special). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
   ahead; `aim` + `want` make it steer toward the clears its special needs (quad recipes stay rare).
+- Tournament continues: `Main.run["credits"]` (3 at the start, max 5); losing with credits left shows a 10 s CONTINUE?
+  countdown (`game.gd` `_continue_prompt`, `Main.continue_fight` retries the same opponent). A car-smashing bonus stage
+  (`bonus.gd`, art `tools/gen_car.py` -> `assets/bonus/car_0..4.png`) comes after fight `Main.BONUS_AFTER`; destroying
+  the car gives +1 continue. The same stage is a hidden free-play game: tap the OPTIONS title seven times quickly
+  (only from the title screen's options, `options.gd` `on_secret`).
 - Landscape (phones turned sideways): `main.gd` switches the window's `content_scale_size` between 540x960 and 960x540
   (the game, title, level and fighter screens have a landscape layout and a `relayout()` that rebuilds them on rotation;
   ranking and options stay portrait, options inside a landscape screen is scaled to fit). `fullscreen.gd` is the full-screen

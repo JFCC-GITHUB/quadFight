@@ -63,6 +63,7 @@ func _open_options() -> void:
 	options_open = true
 	var o := OptionsScreen.new()
 	o.on_close = func(): options_open = false
+	o.on_secret = func(): main.show_bonus(true)
 	if land:  # the options screen is a 540x960 portrait page: fit it to the height
 		var sc := size.y / 960.0
 		o.scale = Vector2(sc, sc)
