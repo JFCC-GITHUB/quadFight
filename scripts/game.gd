@@ -734,8 +734,9 @@ func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
 func _apply_incoming() -> bool:
 	if not special_in.is_empty():
 		for sid in special_in:
+			var ok := Characters.apply(sid, board)  # first: the lightning picks its side here
 			_play_fx(Characters.fx_hit(sid), Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
-			if not Characters.apply(sid, board):
+			if not ok:
 				special_in.clear()
 				_game_over()
 				return false
