@@ -41,7 +41,10 @@ var combo := 0
 var fall_fx := {}          # Vector2i(board cell) -> {t, dur}: landing animation of garbage blocks
 var projectiles: Array = []
 var char_id := "bastion"    # player's fighter (special attack, see characters.gd)
-var cpu_char := "blaze"
+var cpu_char := ""            # the opponent fighter (Main passes it; empty = random)
+var mode := "ladder"           # "ladder" | "tournament"
+var round_no := 1              # tournament: which fight this is, of round_total
+var round_total := 0
 var have: Dictionary = {}      # line-clear sizes collected toward the player's special attack
 var cpu_have: Dictionary = {}
 var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
@@ -120,7 +123,10 @@ func _ready() -> void:
 	if vs:
 		cpu = CpuPlayer.new(cpu_level)
 		cpu.on_clear = _on_cpu_clear
-		cpu_char = Characters.random_other(char_id)
+		if cpu_char == "":
+			cpu_char = Characters.random_other(char_id)
+		cpu.aim = Settings.cpu_special == 2
+		cpu.want = _cpu_want()
 		cpu.on_special = _on_cpu_special
 		player_portrait = Portrait.new()
 		player_portrait.set_char(char_id)
@@ -237,7 +243,10 @@ func _input(event: InputEvent) -> void:
 		if entering_name:
 			_name_input(event)
 		elif event.is_action_pressed("confirm"):
-			main.show_game(vs, cpu_level)
+			if vs:
+				main.show_match()
+			else:
+				main.show_game()
 		return
 	if event.is_action_pressed("pause"):
 		_toggle_pause()
@@ -665,8 +674,19 @@ func _send_attack(power: int, from_player: bool, rows: Array) -> void:
 
 func _on_cpu_clear(n: int, combo_count: int) -> void:
 	_send_attack(_attack_power(n, combo_count), false, [])
-	if Characters.add_clear(cpu_char, cpu_have, n):
+	if Settings.cpu_special != 0 and Characters.add_clear(cpu_char, cpu_have, n):
 		_fire_special(false)
+	cpu.want = _cpu_want()
+
+
+## Clears the CPU's special attack still needs (used when the CPU aims for it).
+func _cpu_want() -> Dictionary:
+	var out := {}
+	var need: Dictionary = Characters.def(cpu_char)["need"]
+	for k in need:
+		if need[k] - cpu_have.get(k, 0) > 0:
+			out[k] = need[k] - cpu_have.get(k, 0)
+	return out
 
 
 ## A full recipe: play the charge-up on the attacker and queue the special on the opponent's board.
@@ -750,29 +770,43 @@ func _vs_end(won: bool) -> void:
 	Sfx.stop_music()
 	Sfx.play("win" if won else "lose")
 	_shake(0.4, 6.0)
-	Settings.add_vs_result(cpu_level, won)
+	var tour := mode == "tournament"
+	if not tour:
+		Settings.add_vs_result(cpu_level, won)
 	var rec: Array = Settings.record(cpu_level)
-	var has_next := won and cpu_level < 10
+	var last := tour and round_no >= round_total
+	var has_next := won and (tour or cpu_level < CpuPlayer.MAX_LEVEL)
 	var card_h := 240.0 + 102.0 + (92.0 if has_next else 0.0) + 70.0 + 36.0
 	var c := _open_overlay(Rect2(50, (960.0 - card_h) * 0.5 - 40.0, 440, card_h))
-	UI.label(c, "YOU WIN!" if won else "YOU LOSE", Rect2(0, 26, 440, 70), 46,
+	var title := "YOU WIN!" if won else "YOU LOSE"
+	if tour:
+		title = ("CHAMPION!" if last else "ROUND CLEAR") if won else "ELIMINATED"
+	UI.label(c, title, Rect2(0, 26, 440, 70), 42 if tour else 46,
 		Style.GOLD if won else Color("ff6f8e"), HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
-	UI.label(c, "vs CPU  Lv %d  %s" % [cpu_level, CpuPlayer.NAMES[cpu_level - 1]], Rect2(0, 100, 440, 34), 20,
+	var foe: String = Characters.def(cpu_char)["name"]
+	UI.label(c, "vs %s  (CPU Lv %d  %s)" % [foe, cpu_level, CpuPlayer.NAMES[cpu_level - 1]], Rect2(0, 100, 440, 34), 18,
 		Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
 	UI.label(c, "YOU  %d lines      CPU  %d lines" % [lines, cpu.lines], Rect2(0, 140, 440, 36), 22, Style.TEXT)
-	UI.label(c, "Record at this level:  %d W  /  %d L" % [rec[0], rec[1]], Rect2(0, 180, 440, 32), 18,
-		Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
+	var info := "Round %d of %d" % [round_no, round_total] if tour else "Record at this level:  %d W  /  %d L" % [rec[0], rec[1]]
+	UI.label(c, info, Rect2(0, 180, 440, 32), 18, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
 	var y := 240.0
-	UI.button(c, "REMATCH", Rect2(40, y, 360, 88), func(): main.show_game(true, cpu_level), 30,
-		Style.BTN_PRIMARY, "retry")
+	if tour:
+		if won:
+			var nxt := "FINISH" if last else "NEXT FIGHT"
+			UI.button(c, nxt, Rect2(40, y, 360, 88), func(): main.next_fight(), 30, Style.BTN_PRIMARY, "swords")
+		else:
+			UI.button(c, "TRY AGAIN", Rect2(40, y, 360, 88), func(): main.start_run("tournament", main.run["base"]), 30,
+				Style.BTN_PRIMARY, "retry")
+		y += 102.0
+		UI.button(c, "MENU", Rect2(40, y, 360, 70), func(): main.show_title(), 22, Style.BTN_GLASS, "home")
+		return
+	UI.button(c, "REMATCH", Rect2(40, y, 360, 88), func(): main.show_match(), 30, Style.BTN_PRIMARY, "retry")
 	y += 102.0
 	if has_next:
-		UI.button(c, "NEXT LEVEL  (Lv %d)" % (cpu_level + 1), Rect2(40, y, 360, 78), func():
-			Settings.vs_level = cpu_level + 1
-			Settings.save()
-			main.show_game(true, cpu_level + 1), 22, Style.BTN_ACCENT, "swords")
+		UI.button(c, "NEXT LEVEL  (Lv %d)" % (cpu_level + 1), Rect2(40, y, 360, 78), func(): main.next_fight(), 22,
+			Style.BTN_ACCENT, "swords")
 		y += 92.0
-	UI.button(c, "LEVELS", Rect2(40, y, 170, 70), func(): main.show_vs_select(), 20, Style.BTN_GLASS, "swords")
+	UI.button(c, "LEVELS", Rect2(40, y, 170, 70), func(): main.show_vs_select("ladder"), 20, Style.BTN_GLASS, "up")
 	UI.button(c, "MENU", Rect2(230, y, 170, 70), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
 
 
@@ -1024,11 +1058,12 @@ func _draw_header() -> void:
 	var rx := size.x - 140.0
 	Style.text(self, cap, Vector2(sx, 42), "SCORE", 16, Style.MUTED, al, sw)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 88), str(int(round(display_score))), 40, Style.TEXT, al, sw, 8)
+	var vs_label := "LADDER" if mode == "ladder" else "ROUND %d / %d" % [round_no, round_total]
 	if vs and landscape:
-		Style.text(self, cap, Vector2(sx, 124), "VS CPU", 16, Style.MUTED, al, sw)
+		Style.text(self, cap, Vector2(sx, 124), vs_label, 16, Style.MUTED, al, sw)
 		Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 152), "Lv %d" % cpu_level, 22, Style.CYAN, al, sw)
 	elif vs:
-		Style.text(self, cap, Vector2(rx, 42), "VS CPU", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+		Style.text(self, cap, Vector2(rx - 40.0, 42), vs_label, 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 164)
 		Style.text(self, Style.FONT_DISPLAY, Vector2(rx, 74), "Lv %d" % cpu_level, 22, Style.CYAN,
 			HORIZONTAL_ALIGNMENT_RIGHT, 124)
 	else:
