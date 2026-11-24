@@ -122,28 +122,37 @@ def cast(name, i):
 # ------------------------------------------------------------------ hit (landing) effects
 
 def hit_bastion(i):
+    """A heavy slab falls, bursts into sand and settles as a mound over the stack."""
     t = i / (FR - 1)
     c = ramp("bastion")
     im, d = canvas()
-    rise = clamp(t * 1.7) ** 0.6
-    H = 38
-    top = GROUND - H * rise
-    d.rectangle((12, top, 52, GROUND), fill=c[3])
-    d.rectangle((12, top, 52, top + 2), fill=c[0])
-    for y in range(int(top) + 2, GROUND, 12):                       # brick rows
-        d.rectangle((12, y, 52, min(y + 10, GROUND)), fill=c[2])
-        d.line((12, y + 11, 52, y + 11), fill=c[3])
-        off = 10 if ((y - GROUND) // 12) % 2 else 20
-        for x in range(12 + off, 52, 20):
-            d.line((x, y, x, y + 10), fill=c[3])
-        d.line((12, y, 52, y), fill=c[1])
+    rnd = random.Random(9)
+    if t < 0.3:
+        y = -12 + (t / 0.3) ** 2 * (GROUND - 24)
+        d.rectangle((12, y, 52, y + 12), fill=c[2])
+        d.rectangle((12, y, 52, y + 2), fill=c[0])
+        d.line((32, y + 2, 32, y + 12), fill=c[3])
+        d.line((12, y + 7, 52, y + 7), fill=c[3])
+        im = outline(im)
+        return im
+    k = (t - 0.3) / 0.7
+    for j in range(46):                                   # grains in flight, then at rest
+        tx = 32 + rnd.uniform(-26, 26)
+        h = rnd.uniform(0, 1)
+        land = GROUND - 1 - 9 * (1 - abs(tx - 32) / 26) * h
+        fall = clamp(k * 1.6 - rnd.random() * 0.5)
+        x = 32 + (tx - 32) * clamp(k * 2.2)
+        y = (GROUND - 30 - rnd.random() * 10) + (land - (GROUND - 30)) * fall ** 1.5 - 14 * math.sin(clamp(k * 2.2) * math.pi) * (1 - fall)
+        d.rectangle((x, y, x + 1, y + 1), fill=c[1] if j % 3 else c[0])
+    mound = 9 * clamp(k * 1.4)
+    d.polygon([(8, GROUND), (22, GROUND - mound * 0.8), (32, GROUND - mound), (42, GROUND - mound * 0.8), (56, GROUND)], fill=c[2])
+    d.polygon([(14, GROUND), (26, GROUND - mound * 0.6), (32, GROUND - mound * 0.8), (40, GROUND - mound * 0.6), (50, GROUND)], fill=c[3])
     im = outline(im)
     d = ImageDraw.Draw(im)
-    if t > 0.25:                                                    # dust
-        k = (t - 0.25) / 0.75
-        for s in (-1, 1):
+    if k < 0.7:                                           # dust
+        for sdir in (-1, 1):
             for j in range(3):
-                disc(d, 32 + s * (22 + k * 12 + j * 3), GROUND - j * 3, max(0, 4 + j - k * 6), c[1])
+                disc(d, 32 + sdir * (14 + k * 24 + j * 3), GROUND - 2 - j * 3, max(0, 4 + j - k * 6), c[1])
     return im
 
 

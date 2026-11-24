@@ -5,11 +5,10 @@ extends RefCounted
 const COLS := 10
 const ROWS := 20
 const GARBAGE := 7  # board value of a garbage block
-const WALL_LIFE := 3  # pieces the victim locks before an iron wall crumbles
 
 const LIST := [
 	{"id": "bastion", "name": "BASTION", "color": "4ab0ff", "need": {1: 2, 3: 1}, "skill": "IRON WALL",
-		"desc": "A solid 3-row wall rises from below, then crumbles."},
+		"desc": "A heavy wall falls and scatters like sand over the stack."},
 	{"id": "blaze", "name": "BLAZE", "color": "ff7a2a", "need": {1: 3}, "skill": "FIRE RAIN",
 		"desc": "10 single blocks pour onto random columns."},
 	{"id": "frost", "name": "FROST", "color": "58c8f8", "need": {2: 2}, "skill": "ICE SPIKES",
@@ -95,10 +94,7 @@ static func progress(id: String, have: Dictionary) -> float:
 static func apply(id: String, board: Array) -> bool:
 	match id:
 		"bastion":
-			var row: Array = []
-			for x in COLS:
-				row.append(GARBAGE)
-			return _push(board, [row, row, row])
+			return _sand(board, 30)
 		"blaze":
 			return _rain(board, 10)
 		"frost":
@@ -122,32 +118,26 @@ static func apply(id: String, board: Array) -> bool:
 	return true
 
 
-## A row made only of garbage is a wall: it is never cleared by the line check.
-static func is_clearable(row: Array) -> bool:
-	if row.has(-1):
-		return false
-	for v in row:
-		if v != GARBAGE:
-			return true
-	return false
-
-
-## Removes every wall row (solid garbage); returns how many.
-static func crumble(board: Array) -> int:
-	var n := 0
-	var y := ROWS - 1
-	while y >= 0:
-		var solid: bool = not board[y].has(-1)
-		for v in board[y]:
-			if v != GARBAGE:
-				solid = false
-		if solid:
-			board.remove_at(y)
-			board.push_front([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1])
-			n += 1
-		else:
-			y -= 1
-	return n
+## Pours `n` grains over the stack, one column at a time; each slides down to a lower neighbour (like sand).
+static func _sand(board: Array, n: int) -> bool:
+	for i in n:
+		var x := i % COLS
+		for step in COLS * 4:
+			var here := _top(board, x)
+			var left := _top(board, x - 1) if x > 0 else -99
+			var right := _top(board, x + 1) if x < COLS - 1 else -99
+			# a neighbour whose surface is 2+ cells lower (top index larger) takes the grain
+			if left >= here + 2 and left >= right:
+				x -= 1
+			elif right >= here + 2:
+				x += 1
+			else:
+				break
+		var y := _top(board, x) - 1
+		if y < 0:
+			return false
+		board[y][x] = GARBAGE
+	return true
 
 
 ## Pushes whole rows in from the bottom; false if existing blocks were pushed off the top.
