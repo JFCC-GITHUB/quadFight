@@ -16,14 +16,14 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 		# Gamepad: D-pad (left/right/down) on the left, A/B/X/Y diamond on the right.
 		var d := Style.BTN_DPAD
 		list = [
-			_b("hard_drop", "drop", 103, 733, 70, 70, false, d, 0, 14),
-			_b("move_left", "left", 33, 803, 105, 70, true, d, 0, 14),
-			_b("move_right", "right", 138, 803, 105, 70, true, d, 0, 14),
-			_b("soft_drop", "down", 103, 873, 70, 70, true, d, 0, 14),
-			_b("hard_drop", "drop", 360, 732, 84, 84, false, Style.BTN_SNES_X, 1, 42),
-			_b("hold", "hold", 276, 796, 84, 84, false, Style.BTN_SNES_Y, 1, 42),
-			_b("rotate_ccw", "rotate_ccw", 444, 796, 84, 84, false, Style.BTN_SNES_A, 1, 42),
-			_b("rotate_cw", "rotate", 360, 860, 84, 84, false, Style.BTN_SNES_B, 1, 42),
+			_b("hard_drop", "drop", 78, 733, 70, 70, false, d, 0, 14),
+			_b("move_left", "left", 8, 803, 105, 70, true, d, 0, 14),
+			_b("move_right", "right", 113, 803, 105, 70, true, d, 0, 14),
+			_b("soft_drop", "down", 78, 873, 70, 70, true, d, 0, 14),
+			_b("hard_drop", "drop", 364, 732, 84, 84, false, Style.BTN_SNES_X, 1, 42),
+			_b("hold", "hold", 280, 796, 84, 84, false, Style.BTN_SNES_Y, 1, 42),
+			_b("rotate_ccw", "rotate_ccw", 448, 796, 84, 84, false, Style.BTN_SNES_A, 1, 42),
+			_b("rotate_cw", "rotate", 364, 860, 84, 84, false, Style.BTN_SNES_B, 1, 42),
 		]
 	elif layout == "thumbs":
 		list = [
@@ -47,6 +47,8 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 	if swap_sides:
 		for b in list:
 			var shift := SWAP_SHIFT if b["cluster"] == 0 else -SWAP_SHIFT
+			if layout == "snes": # mirror each cluster to the other edge
+				shift = 314.0 if b["cluster"] == 0 else -272.0
 			b["rect"].position.x += shift
 	if layout == "snes":
 		var pad := Rect2()
