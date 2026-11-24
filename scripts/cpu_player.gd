@@ -25,6 +25,7 @@ var pos := Vector2i.ZERO
 var lines := 0
 var combo := 0
 var incoming := 0   # garbage blocks waiting to drop on this board
+var wall_left := 0   # pieces until an iron wall on this board crumbles
 var special_in: Array = []   # special attacks (character ids) waiting to land on this board
 var alive := true
 
@@ -196,10 +197,14 @@ func _lock() -> void:
 		var p: Vector2i = pos + c
 		if p.y >= 0:
 			board[p.y][p.x] = kind
+	if wall_left > 0:
+		wall_left -= 1
+		if wall_left == 0:
+			Characters.crumble(board)
 	var cleared := 0
 	var y := ROWS - 1
 	while y >= 0:
-		if not board[y].has(-1):
+		if Characters.is_clearable(board[y]):
 			board.remove_at(y)
 			board.push_front(_empty_row())
 			cleared += 1
@@ -224,6 +229,8 @@ func apply_incoming() -> void:
 			alive = false
 			special_in.clear()
 			return
+		if sid == "bastion":
+			wall_left = Characters.WALL_LIFE
 	special_in.clear()
 	if incoming <= 0:
 		return
@@ -294,7 +301,7 @@ func _evaluate(k: int, r: int, p: Vector2i) -> float:
 	var cleared := 0
 	var y := ROWS - 1
 	while y >= 0:
-		if not tb[y].has(-1):
+		if Characters.is_clearable(tb[y]):
 			tb.remove_at(y)
 			tb.push_front(_empty_row())
 			cleared += 1
