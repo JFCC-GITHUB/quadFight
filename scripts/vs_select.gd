@@ -167,12 +167,12 @@ func _draw() -> void:
 
 func _draw_tour_card(card: Rect2, cap: Font) -> void:
 	var levels := Main.tour_levels(Settings.tour_diff)
-	Style.text(self, cap, card.position + Vector2(0, 34), "YOUR FIGHTS", 15, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, card.size.x)
+	Style.text(self, cap, card.position + Vector2(0, 34), "5 MYSTERY FIGHTERS", 15, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, card.size.x)
 	var step := 36.0 if land else 27.0
 	for i in levels.size():
 		var y := card.position.y + (72.0 if land else 62.0) + i * step
 		Style.text(self, cap, Vector2(card.position.x + 34, y), "FIGHT %d" % (i + 1), 15, Style.MUTED)
-		Style.text(self, Style.FONT_BOLD, Vector2(card.position.x, y + 2), "Lv %d   %s" % [levels[i], CpuPlayer.NAMES[levels[i] - 1]],
+		Style.text(self, Style.FONT_BOLD, Vector2(card.position.x, y + 2), "?????    Lv %d" % levels[i],
 			20, Style.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, card.size.x - 34)
 	Style.text(self, Style.FONT_SEMI, Vector2(card.position.x, card.end.y - 16), "Tournaments won:  %d" % Settings.tour_clears, 16,
 		Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, card.size.x)

@@ -139,7 +139,7 @@ func _ready() -> void:
 		add_child(fx_layer)
 		_place_nodes()
 	_spawn()
-	Sfx.start_music()
+	Sfx.start_music(cpu_char if vs and mode == "tournament" else "")  # each tournament opponent has its own theme
 
 
 func _exit_tree() -> void:
