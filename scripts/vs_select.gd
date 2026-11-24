@@ -18,7 +18,7 @@ func _ready() -> void:
 		var r := Rect2(26 + (i % 5) * 100, 176 + (i / 5) * 100, 88, 88)
 		var b := UI.button(self, str(lv), r, func(): _select(lv), 34, Style.BTN_GLASS)
 		level_buttons.append(b)
-	UI.button(self, "START", Rect2(110, 704, 320, 94), _start, 38, Style.BTN_PRIMARY, "swords")
+	UI.button(self, "NEXT", Rect2(110, 704, 320, 94), _start, 38, Style.BTN_PRIMARY, "swords")
 	UI.button(self, "BACK", Rect2(150, 814, 240, 70), func(): main.show_title(), 26, Style.BTN_GLASS, "left")
 	_refresh()
 
@@ -41,7 +41,7 @@ func _refresh() -> void:
 func _start() -> void:
 	Settings.vs_level = level
 	Settings.save()
-	main.show_game(true, level)
+	main.show_char_select(level)
 
 
 func _unhandled_input(event: InputEvent) -> void:

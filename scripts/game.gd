@@ -8,6 +8,9 @@ const Pieces := preload("res://scripts/pieces.gd")
 const TouchLayout := preload("res://scripts/touch_layout.gd")
 const OptionsScreen := preload("res://scripts/options.gd")
 const CpuPlayer := preload("res://scripts/cpu_player.gd")
+const Characters := preload("res://scripts/characters.gd")
+const Portrait := preload("res://scripts/portrait.gd")
+const FxLayer := preload("res://scripts/fx_layer.gd")
 
 const COLS := 10
 const ROWS := 20
@@ -38,6 +41,13 @@ var incoming := 0          # garbage blocks that will drop on the player
 var combo := 0
 var fall_fx := {}          # Vector2i(board cell) -> {t, dur}: landing animation of garbage blocks
 var projectiles: Array = []
+var char_id := "bastion"    # player's fighter (special attack, see characters.gd)
+var cpu_char := "blaze"
+var have: Dictionary = {}      # line-clear sizes collected toward the player's special attack
+var cpu_have: Dictionary = {}
+var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
+var fx_layer: Control
+var special_flash := 0.0
 
 var board: Array = []
 var bag: Array = []
@@ -100,6 +110,21 @@ func _ready() -> void:
 	if vs:
 		cpu = CpuPlayer.new(cpu_level)
 		cpu.on_clear = _on_cpu_clear
+		cpu_char = Characters.random_other(char_id)
+		cpu.on_special = _on_cpu_special
+		var pp := Portrait.new()
+		pp.position = Vector2(14, 428)
+		pp.size = Vector2(96, 96)
+		pp.set_char(char_id)
+		add_child(pp)
+		var cp := Portrait.new()
+		cp.position = Vector2(430, 594)
+		cp.size = Vector2(96, 96)
+		cp.set_char(cpu_char)
+		add_child(cp)
+		fx_layer = FxLayer.new()
+		fx_layer.size = size
+		add_child(fx_layer)
 	_spawn()
 	Sfx.start_music()
 
@@ -265,6 +290,7 @@ func _process(delta: float) -> void:
 
 
 func _update_effects(delta: float) -> void:
+	special_flash = maxf(0.0, special_flash - delta * 1.5)
 	if state == State.PAUSED:
 		return
 	display_score = lerpf(display_score, float(score), minf(1.0, delta * 10.0))
@@ -504,6 +530,8 @@ func _begin_clear(rows: Array) -> void:
 	if vs:
 		combo += 1
 		_send_attack(_attack_power(n, combo), true, rows)
+		if Characters.add_clear(char_id, have, n):
+			_fire_special(true)
 	_shake(0.3 if n == 4 else 0.15, 7.0 if n == 4 else 3.0)
 	Sfx.play("clear%d" % n)
 
@@ -570,6 +598,30 @@ func _send_attack(power: int, from_player: bool, rows: Array) -> void:
 
 func _on_cpu_clear(n: int, combo_count: int) -> void:
 	_send_attack(_attack_power(n, combo_count), false, [])
+	if Characters.add_clear(cpu_char, cpu_have, n):
+		_fire_special(false)
+
+
+## A full recipe: play the charge-up on the attacker and queue the special on the opponent's board.
+func _fire_special(from_player: bool) -> void:
+	var id := char_id if from_player else cpu_char
+	var d := Characters.def(id)
+	var at := Rect2(-6, 410, 124, 124) if from_player else Rect2(416, 576, 124, 124)
+	fx_layer.play(Characters.FX_CAST[id], at, 14.0)
+	_popup(d["skill"] + "!", Color(d["color"]))
+	special_flash = 1.0
+	Sfx.play("levelup")
+	if from_player:
+		cpu.special_in.append(id)
+	else:
+		special_in.append(id)
+
+
+## The player's special landed on the CPU board: hit animation over its mini board.
+func _on_cpu_special(id: String) -> void:
+	fx_layer.play(Characters.FX_HIT[id], Rect2(418, 431, 120, 120), 12.0)
+	_shake(0.2, 3.0)
+	Sfx.play("hit")
 
 
 func _cpu_center() -> Vector2:
@@ -586,6 +638,16 @@ func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
 ## Drops the pending garbage onto random columns of the player's board.
 ## Returns false if it overflowed the board (the player loses).
 func _apply_incoming() -> bool:
+	if not special_in.is_empty():
+		for sid in special_in:
+			fx_layer.play(Characters.FX_HIT[sid], Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
+			if not Characters.apply(sid, board):
+				special_in.clear()
+				_game_over()
+				return false
+		special_in.clear()
+		Sfx.play("hit")
+		_shake(0.35, 7.0)
 	if incoming <= 0:
 		return true
 	var n := incoming
@@ -908,6 +970,35 @@ func _draw_side_panels() -> void:
 		y += 86.0 if i == 0 else 72.0
 	if vs:
 		_draw_cpu_panel()
+		_draw_fighters()
+
+
+## Fighter cards: portrait, special-attack name and a gauge of the recipe's clears.
+func _draw_fighters() -> void:
+	var d := Characters.def(char_id)
+	var col := Color(d["color"])
+	var flash := special_flash * (0.5 + 0.5 * sin(time * 30.0))
+	var r := Rect2(LEFT_X, 418, COL_W, 188)
+	draw_style_box(Style.panel_box(Style.PANEL, 16, col.lerp(Color.WHITE, flash), Color(col, 0.25 + 0.5 * flash), 14), r)
+	Style.text(self, Style.FONT_BOLD, Vector2(r.position.x, 548), d["name"], 15, col, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	Style.text(self, Style.caption_font(), Vector2(r.position.x, 566), d["skill"], 11, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	var used := {}
+	var pips := Characters.pips(char_id)
+	var x0 := r.position.x + (r.size.x - (pips.size() * 28.0 - 4.0)) * 0.5
+	for i in pips.size():
+		var n: int = pips[i]
+		var got: bool = have.get(n, 0) > used.get(n, 0)
+		used[n] = used.get(n, 0) + 1
+		var pr := Rect2(x0 + i * 28.0, 576, 24, 24)
+		draw_style_box(Style.panel_box(col if got else Color(0.12, 0.1, 0.25), 6, col.lightened(0.4) if got else Color(col, 0.35)), pr)
+		Style.text(self, Style.FONT_BOLD, pr.position + Vector2(0, 18), str(n), 16,
+			Color(0.06, 0.04, 0.14) if got else Color(col, 0.6), HORIZONTAL_ALIGNMENT_CENTER, 24)
+	var cd := Characters.def(cpu_char)
+	var cc := Color(cd["color"])
+	Style.text(self, Style.FONT_BOLD, Vector2(CPU_PANEL.position.x, 708), cd["name"], 15, cc, HORIZONTAL_ALIGNMENT_CENTER, CPU_PANEL.size.x)
+	var bar := Rect2(CPU_PANEL.position.x + 6, 586, CPU_PANEL.size.x - 12, 5)
+	draw_rect(bar, Color(0, 0, 0, 0.5))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * Characters.progress(cpu_char, cpu_have), bar.size.y)), cc)
 
 
 ## Mini view of the computer's board (VS mode).

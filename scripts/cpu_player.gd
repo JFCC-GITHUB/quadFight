@@ -3,6 +3,7 @@ extends RefCounted
 ## Level 1-10 changes how fast it reacts / moves and how often it blunders.
 
 const Pieces := preload("res://scripts/pieces.gd")
+const Characters := preload("res://scripts/characters.gd")
 
 const COLS := 10
 const ROWS := 20
@@ -24,6 +25,7 @@ var pos := Vector2i.ZERO
 var lines := 0
 var combo := 0
 var incoming := 0   # garbage blocks waiting to drop on this board
+var special_in: Array = []   # special attacks (character ids) waiting to land on this board
 var alive := true
 
 var gravity_acc := 0.0
@@ -37,6 +39,7 @@ var failed_moves := 0
 
 var on_clear: Callable = func(_rows, _combo): pass   # (rows_cleared: int, combo: int)
 var on_hit: Callable = func(_n): pass                # garbage landed (count)
+var on_special: Callable = func(_id): pass           # a special attack landed (character id)
 var rng := RandomNumberGenerator.new()
 
 
@@ -215,6 +218,13 @@ func _lock() -> void:
 
 ## Drops pending garbage blocks onto random columns. Overflowing the board loses the game.
 func apply_incoming() -> void:
+	for sid in special_in:
+		on_special.call(sid)
+		if not Characters.apply(sid, board):
+			alive = false
+			special_in.clear()
+			return
+	special_in.clear()
 	if incoming <= 0:
 		return
 	var n := incoming

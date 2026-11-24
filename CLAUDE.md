@@ -51,6 +51,10 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   speed, mistake rate), `vs_select.gd` (level picker), and the `vs` branches in `game.gd` (attack power 1-10
   random garbage blocks, cancelling of own incoming, garbage = board value 7 / 8th theme colour, CPU mini board,
   result overlay). Gravity is capped (level 7) in VS. Win/loss record per level lives in `Settings`.
+- VS characters: `characters.gd` (6 fighters: recipe of line-clear sizes that add up in any order, special-attack board
+  operations shared by player and CPU), `char_select.gd` (after the level picker), `portrait.gd` / `fx_layer.gd`
+  (nearest-filtered pixel art + 8-frame strip animations). Art comes from `tools/gen_characters.py` (96px pixel busts,
+  5x nearest) and `tools/gen_fx.py` (`assets/fx/<char>_<cast|hit>.png`); re-run them and `godot --headless --import`.
 - SFX have two styles (`arcade`, `soft`) built lazily in `sfx.gd`; all sound names must exist in both banks.
 - Colour themes and backgrounds are defined ONLY in `tools/gen_assets.py` (`THEMES`, `BACKGROUNDS`).
   It writes `assets/blocks/<theme>_<kind>.png`, `assets/bg_<id>.jpg` and `assets/themes.json`;
