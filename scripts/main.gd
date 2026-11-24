@@ -76,10 +76,13 @@ func start_run(mode: String, level: int) -> void:
 			if d["id"] != player:
 				ids.append(d["id"])
 		ids.shuffle()
+		ids.append(Characters.DARK + player)  # the last fight: a dark version of yourself
 		run["order"] = ids
 		run["cpu"] = ids[0]
-		run["levels"] = tour_levels(level, ids.size())
-		run["level"] = run["levels"][0]
+		var lv := tour_levels(level, ids.size() - 1)
+		lv.append(mini(lv[-1] + 1, CpuPlayer.MAX_LEVEL))
+		run["levels"] = lv
+		run["level"] = lv[0]
 	else:
 		run["cpu"] = Characters.random_other(player) if Settings.vs_cpu_char == "random" else Settings.vs_cpu_char
 	show_intro()

@@ -36,15 +36,49 @@ const FX_HIT := {
 	"frost": preload("res://assets/fx/frost_hit.png"), "volt": preload("res://assets/fx/volt_hit.png"),
 	"shade": preload("res://assets/fx/shade_hit.png"), "titan": preload("res://assets/fx/titan_hit.png"),
 }
+const DARK_PORTRAITS := {
+	"bastion": preload("res://assets/chars/bastion_dark.png"), "blaze": preload("res://assets/chars/blaze_dark.png"),
+	"frost": preload("res://assets/chars/frost_dark.png"), "volt": preload("res://assets/chars/volt_dark.png"),
+	"shade": preload("res://assets/chars/shade_dark.png"), "titan": preload("res://assets/chars/titan_dark.png"),
+}
 const FX_FRAMES := 8
 const FX_CELL := 192  # px of one animation frame in a strip
 
 
+## The tournament boss is a "dark" copy of the player's own fighter, id "dark_<fighter>".
+const DARK := "dark_"
+
+
+static func is_dark(id: String) -> bool:
+	return id.begins_with(DARK)
+
+
+static func base(id: String) -> String:
+	return id.trim_prefix(DARK)
+
+
 static func def(id: String) -> Dictionary:
 	for d in LIST:
-		if d["id"] == id:
+		if d["id"] == base(id):
+			if is_dark(id):
+				var dark: Dictionary = d.duplicate()
+				dark["name"] = "DARK " + d["name"]
+				dark["color"] = "ff3050"
+				return dark
 			return d
 	return LIST[0]
+
+
+static func portrait(id: String) -> Texture2D:
+	return DARK_PORTRAITS[base(id)] if is_dark(id) else PORTRAITS[id]
+
+
+static func fx_cast(id: String) -> Texture2D:
+	return FX_CAST[base(id)]
+
+
+static func fx_hit(id: String) -> Texture2D:
+	return FX_HIT[base(id)]
 
 
 static func random_other(id: String) -> String:
@@ -92,7 +126,7 @@ static func progress(id: String, have: Dictionary) -> float:
 
 ## Applies character `id`'s special attack to `board`. Returns false when the board overflowed (that side loses).
 static func apply(id: String, board: Array) -> bool:
-	match id:
+	match base(id):
 		"bastion":
 			return _sand(board, 30)
 		"blaze":

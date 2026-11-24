@@ -113,11 +113,11 @@ func _draw() -> void:
 	if champion:
 		Style.text(self, Style.FONT_DISPLAY, Vector2(0, 70), "CHAMPION!", 54, Color("ffd400"), HORIZONTAL_ALIGNMENT_CENTER,
 			size.x if not land else 960.0, 10)
-		var lines := ["You beat all %d fighters." % run["order"].size(), "Tournaments won:  %d" % Settings.tour_clears,
+		var lines := ["You beat every fighter,", "even your own dark self.", "Tournaments won:  %d" % Settings.tour_clears,
 			"Won with  %s" % Characters.def(run["player"])["name"]]
 		for i in lines.size():
 			Style.text(self, Style.FONT_SEMI, Vector2(540 if land else 0, (200 if land else 640) + i * 30), lines[i], 20,
-				Style.TEXT if i != 1 else Style.GOLD, HORIZONTAL_ALIGNMENT_LEFT if land else HORIZONTAL_ALIGNMENT_CENTER,
+				Style.TEXT if i != 2 else Style.GOLD, HORIZONTAL_ALIGNMENT_LEFT if land else HORIZONTAL_ALIGNMENT_CENTER,
 				400.0 if land else size.x)
 		return
 	# colour bands, one per fighter, sliding in on a diagonal; speed lines streak across
@@ -136,11 +136,15 @@ func _draw() -> void:
 		draw_line(Vector2(x, y), Vector2(x + len, y), Color(1, 1, 1, 0.10), 2.0)
 	# header
 	var head := ""
-	if run["mode"] == "tournament":
+	var boss: bool = run["mode"] == "tournament" and run["round"] == run["order"].size() - 1
+	if boss:
+		head = "FINAL FIGHT"
+	elif run["mode"] == "tournament":
 		head = "ROUND %d / %d" % [run["round"] + 1, run["order"].size()]
 	else:
 		head = "LADDER"
-	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 62 if land else 90), head, 40, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
+	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 62 if land else 90), head, 40, Color("ff3050") if boss else Style.TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
 	Style.text(self, Style.caption_font(), Vector2(0, 92 if land else 122), "CPU  LV %d   %s" % [run["level"], CpuPlayer.NAMES[run["level"] - 1].to_upper()],
 		16, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	# names

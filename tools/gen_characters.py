@@ -313,6 +313,22 @@ def skill_icons():
     ic.save("sk_boulder")
 
 
+def dark_variant(im):
+    """The 'dark self': luminance mapped onto black / purple / crimson, glowing parts (eyes, gems) turned red."""
+    a = np.array(im).astype(np.float32)
+    rgb, alpha = a[..., :3] / 255.0, a[..., 3]
+    mx, mn = rgb.max(axis=2), rgb.min(axis=2)
+    lum = rgb[..., 0] * 0.3 + rgb[..., 1] * 0.59 + rgb[..., 2] * 0.11
+    sat = (mx - mn) / np.maximum(mx, 1e-4)
+    glow = (lum > 0.72) | ((sat > 0.55) & (lum > 0.5))
+    lo, mid, hi = np.array([8, 4, 16.0]), np.array([64, 18, 84.0]), np.array([170, 30, 70.0])
+    t = np.clip(lum, 0, 1)[..., None]
+    base = np.where(t < 0.5, lo + (mid - lo) * (t / 0.5), mid + (hi - mid) * ((t - 0.5) / 0.5))
+    red = np.stack([np.full_like(lum, 255), 40 + 140 * np.clip(lum - 0.5, 0, 1), np.full_like(lum, 56)], axis=2)
+    out = np.where(glow[..., None], red, base)
+    return Image.fromarray(np.dstack([out, alpha]).astype(np.uint8), "RGBA")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     cell = W * UP
@@ -322,6 +338,7 @@ def main():
         im.save(os.path.join(OUT, cid + ".png"))
         im.crop((16 * UP, 0, 80 * UP, 64 * UP)).resize((128, 128), Image.NEAREST).save(os.path.join(OUT, cid + "_s.png"))
         sheet.paste(im, ((i % 3) * cell, (i // 3) * cell), im)
+        dark_variant(im).save(os.path.join(OUT, cid + "_dark.png"))
     sheet.save(os.path.join(os.environ.get("SHEET_DIR", "/tmp"), "chars_sheet.png"))
     skill_icons()
     print("characters written to", OUT)
