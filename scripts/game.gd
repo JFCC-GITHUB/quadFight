@@ -125,7 +125,7 @@ func _ready() -> void:
 		cpu.on_clear = _on_cpu_clear
 		if cpu_char == "":
 			cpu_char = Characters.random_other(char_id)
-		cpu.aim = Settings.cpu_special == 2
+		cpu.aim = Settings.cpu_special == 2 or (Settings.cpu_special == 1 and Characters.is_dark(cpu_char))  # the boss plays for it
 		cpu.want = _cpu_want()
 		cpu.on_special = _on_cpu_special
 		player_portrait = Portrait.new()
@@ -139,7 +139,9 @@ func _ready() -> void:
 		add_child(fx_layer)
 		_place_nodes()
 	_spawn()
-	Sfx.start_music(cpu_char if vs and mode == "tournament" else "")  # each tournament opponent has its own theme
+	# each tournament opponent has its own theme; the dark boss plays yours, slower and lower
+	var theme := Characters.base(cpu_char) if vs and mode == "tournament" else ""
+	Sfx.start_music(theme, 0.86 if Characters.is_dark(cpu_char) else 1.0)
 
 
 func _exit_tree() -> void:
@@ -694,9 +696,9 @@ func _fire_special(from_player: bool) -> void:
 	var id := char_id if from_player else cpu_char
 	var d := Characters.def(id)
 	if from_player:
-		_play_fx(Characters.FX_CAST[id], Rect2(-6, 410, 124, 124), 14.0)
+		_play_fx(Characters.fx_cast(id), Rect2(-6, 410, 124, 124), 14.0)
 	else:
-		fx_layer.play(Characters.FX_CAST[id], cpu_portrait_rect.grow(14.0), 14.0)
+		fx_layer.play(Characters.fx_cast(id), cpu_portrait_rect.grow(14.0), 14.0)
 	_popup(d["skill"] + "!", Color(d["color"]))
 	special_flash = 1.0
 	Sfx.play("levelup")
@@ -710,7 +712,7 @@ func _fire_special(from_player: bool) -> void:
 func _on_cpu_special(id: String) -> void:
 	var w := cpu_cell * COLS * 1.33   # the hit sprite is drawn over the mini board, ground line at its bottom
 	var bottom := cpu_rect.position.y + 40.0 + cpu_cell * ROWS
-	fx_layer.play(Characters.FX_HIT[id], Rect2(cpu_rect.get_center().x - w * 0.5, bottom - w * 0.875, w, w), 12.0)
+	fx_layer.play(Characters.fx_hit(id), Rect2(cpu_rect.get_center().x - w * 0.5, bottom - w * 0.875, w, w), 12.0)
 	_shake(0.2, 3.0)
 	Sfx.play("hit")
 
@@ -732,7 +734,7 @@ func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
 func _apply_incoming() -> bool:
 	if not special_in.is_empty():
 		for sid in special_in:
-			_play_fx(Characters.FX_HIT[sid], Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
+			_play_fx(Characters.fx_hit(sid), Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
 			if not Characters.apply(sid, board):
 				special_in.clear()
 				_game_over()

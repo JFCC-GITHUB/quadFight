@@ -21,7 +21,7 @@ func set_char(id: String) -> void:
 
 
 func _draw() -> void:
-	var tex: Texture2D = Characters.PORTRAITS[char_id]
+	var tex: Texture2D = Characters.portrait(char_id)
 	var s := tex.get_size()
 	if flip_h:
 		draw_set_transform(Vector2(size.x, 0), 0.0, Vector2(-1, 1))

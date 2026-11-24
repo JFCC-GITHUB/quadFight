@@ -49,8 +49,9 @@ func play(sound: String) -> void:
 
 
 ## `theme`: a fighter id to play that fighter's own music instead of the chosen style ("" = the chosen style).
-func start_music(theme: String = "") -> void:
+func start_music(theme: String = "", pitch: float = 1.0) -> void:
 	_theme = theme
+	_music.pitch_scale = pitch
 	_music_wanted = true
 	if not Settings.music_on:
 		return
@@ -108,6 +109,7 @@ func stop_preview() -> void:
 
 func stop_music() -> void:
 	_music_wanted = false
+	_music.pitch_scale = 1.0
 	_music.stop()
 
 

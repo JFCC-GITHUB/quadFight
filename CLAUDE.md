@@ -58,7 +58,9 @@ with their OFL.txt kept beside them in `assets/fonts/`.
 - VS modes: LADDER (one opponent, `Main.run` level +1 per win) and TOURNAMENT (the 5 other fighters, shuffled, one level
   harder each, lose once = out). `Main.start_run` / `next_fight` / `show_match` drive both; `vs_select.gd` (level stepper,
   CPU special setting: NEVER / NORMAL / AIM), `char_select.gd` (step 0 you, step 1 opponent or RANDOM), `intro.gd` (versus
-  intro between fights + champion screen). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
+  intro between fights + champion screen). The tournament ends with a boss: a "dark" copy of your own fighter (id
+  `dark_<fighter>`, art `assets/chars/<fighter>_dark.png` from `dark_variant()` in gen_characters.py, `Characters.base/def/
+  portrait` resolve it; it plays your theme slower/lower and aims for its special). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
   ahead; `aim` + `want` make it steer toward the clears its special needs (quad recipes stay rare).
 - Landscape (phones turned sideways): `main.gd` switches the window's `content_scale_size` between 540x960 and 960x540
   (the game, title, level and fighter screens have a landscape layout and a `relayout()` that rebuilds them on rotation;

@@ -149,7 +149,7 @@ func _draw() -> void:
 	Style.draw_icon(self, "swords" if mode == "tournament" else "up", Vector2(hx - 40 - title.length() * 11.0, 64), 44, Style.TEXT)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 82), title, 38, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, size.x + 90, 8)
 	var cap := Style.caption_font()
-	var sub := "CHOOSE THE DIFFICULTY  (5 fights, the levels climb evenly)" if mode == "tournament" else "CHOOSE THE COMPUTER'S LEVEL"
+	var sub := "CHOOSE THE DIFFICULTY  (the levels climb evenly)" if mode == "tournament" else "CHOOSE THE COMPUTER'S LEVEL"
 	var cx := 290.0 if land else hx
 	Style.text(self, cap, Vector2(cx - 300.0, 112 if land else 140), sub, 15, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, 600.0)
 	var card := Rect2(570, 120, 360, 290) if land else (Rect2(26, 366, 488, 214) if mode == "tournament" else Rect2(26, 312, 488, 226))
@@ -167,7 +167,7 @@ func _draw() -> void:
 
 func _draw_tour_card(card: Rect2, cap: Font) -> void:
 	var levels := Main.tour_levels(Settings.tour_diff)
-	Style.text(self, cap, card.position + Vector2(0, 34), "5 MYSTERY FIGHTERS", 15, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, card.size.x)
+	Style.text(self, cap, card.position + Vector2(0, 34), "MYSTERY FIGHTERS", 15, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, card.size.x)
 	var step := 36.0 if land else 27.0
 	for i in levels.size():
 		var y := card.position.y + (72.0 if land else 62.0) + i * step
