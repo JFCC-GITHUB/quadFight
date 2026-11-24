@@ -7,6 +7,7 @@ const BoardScreen := preload("res://scripts/leaderboard.gd")
 const VsSelectScreen := preload("res://scripts/vs_select.gd")
 const CharSelectScreen := preload("res://scripts/char_select.gd")
 const IntroScreen := preload("res://scripts/intro.gd")
+const BonusScreen := preload("res://scripts/bonus.gd")
 const Characters := preload("res://scripts/characters.gd")
 const CpuPlayer := preload("res://scripts/cpu_player.gd")
 
@@ -18,6 +19,8 @@ var landscape_ok := false  # the current screen has a landscape layout
 ## The VS run in progress. mode "ladder": one opponent, the level keeps rising.
 ## mode "tournament": every other fighter once, in random order, one level harder each time.
 var run := {}
+const START_CREDITS := 3   # tournament continues
+const BONUS_AFTER := 3     # the car-smashing bonus stage comes after this many tournament fights
 
 ## Tournament difficulty: the CPU level range, spread evenly over the 5 fights.
 const TOUR_NAMES := ["EASY", "NORMAL", "HARD"]
@@ -69,7 +72,7 @@ func show_char_select(level: int, mode: String, step: int = 0) -> void:
 ## `level` is the starting CPU level for the ladder, or the difficulty index (0-2) for the tournament.
 func start_run(mode: String, level: int) -> void:
 	var player: String = Settings.vs_char
-	run = {"mode": mode, "player": player, "level": level, "base": level, "round": 0, "order": [], "cpu": ""}
+	run = {"mode": mode, "player": player, "level": level, "base": level, "round": 0, "order": [], "cpu": "", "credits": START_CREDITS}
 	if mode == "tournament":
 		var ids: Array = []
 		for d in Characters.LIST:
@@ -105,11 +108,26 @@ func next_fight() -> void:
 			return
 		run["cpu"] = run["order"][run["round"]]
 		run["level"] = run["levels"][run["round"]]
+		if run["round"] == BONUS_AFTER:
+			show_bonus()
+			return
 	else:
 		run["level"] = mini(run["level"] + 1, CpuPlayer.MAX_LEVEL)
 		Settings.vs_level = run["level"]
 		Settings.save()
 	show_intro()
+
+
+func show_bonus(free: bool = false) -> void:
+	var s := BonusScreen.new()
+	s.free = free
+	_swap(s, true)
+
+
+## Tournament: spend a continue and fight the same opponent again.
+func continue_fight() -> void:
+	run["credits"] -= 1
+	show_match()
 
 
 func show_match() -> void:

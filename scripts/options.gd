@@ -10,6 +10,9 @@ const TABS := ["COLORS", "SOUND", "TOUCH", "KEYS"]
 const PANEL := Rect2(16, 196, 508, 640)
 
 var on_close: Callable = func(): pass
+var on_secret: Callable = Callable()  # set by the title screen: seven quick taps on the title open the bonus game
+var _taps := 0
+var _last_tap := 0
 var tab := 0
 var content: Control
 var tab_row: Control
@@ -20,9 +23,28 @@ func _ready() -> void:
 	size = Vector2(540, 960)
 	tab_row = Control.new()
 	add_child(tab_row)
+	var secret := Button.new()
+	secret.flat = true
+	secret.position = Vector2(110, 20)
+	secret.size = Vector2(320, 92)
+	secret.focus_mode = Control.FOCUS_NONE
+	secret.pressed.connect(_secret_tap)
+	add_child(secret)
 	UI.button(self, "BACK", Rect2(130, 862, 280, 76), _close, 28, Style.BTN_GLASS, "left")
 	_build_tabs()
 	_build_tab()
+
+
+func _secret_tap() -> void:
+	var now := Time.get_ticks_msec()
+	_taps = 1 if now - _last_tap > 1200 else _taps + 1
+	_last_tap = now
+	if _taps >= 7 and on_secret.is_valid():
+		_taps = 0
+		Sfx.play("levelup")
+		on_secret.call()
+	elif _taps >= 3 and on_secret.is_valid():
+		Sfx.play("click")
 
 
 func _close() -> void:

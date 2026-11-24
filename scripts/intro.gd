@@ -147,6 +147,12 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
 	Style.text(self, Style.caption_font(), Vector2(0, 92 if land else 122), "CPU  LV %d   %s" % [run["level"], CpuPlayer.NAMES[run["level"] - 1].to_upper()],
 		16, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	if run["mode"] == "tournament":
+		var n: int = run.get("credits", 0)
+		var y := 108.0 if land else 138.0
+		Style.text(self, Style.caption_font(), Vector2(size.x * 0.5 - 90.0, y + 12.0), "CONTINUES", 13, Style.MUTED)
+		for i in n:
+			draw_circle(Vector2(size.x * 0.5 + 10.0 + i * 20.0, y + 6.0), 7.0, Style.GOLD)
 	# names
 	if time > 0.4:
 		if land:
