@@ -22,6 +22,7 @@ var move_speed := 1      # 0 slow, 1 normal, 2 fast
 var ghost := true
 # VS CPU
 var vs_level := 3
+var vs_char := "bastion"
 var vs_record := {}  # cpu level (int) -> [wins, losses]
 
 
@@ -42,6 +43,7 @@ func _ready() -> void:
 	move_speed = clampi(cfg.get_value("controls", "move_speed", move_speed), 0, 2)
 	ghost = cfg.get_value("controls", "ghost", ghost)
 	vs_level = clampi(cfg.get_value("vs", "level", vs_level), 1, 10)
+	vs_char = cfg.get_value("vs", "char", vs_char)
 	for lv in range(1, 11):
 		vs_record[lv] = [int(cfg.get_value("vs", "w%d" % lv, 0)), int(cfg.get_value("vs", "l%d" % lv, 0))]
 
@@ -72,6 +74,7 @@ func save() -> void:
 	cfg.set_value("controls", "move_speed", move_speed)
 	cfg.set_value("controls", "ghost", ghost)
 	cfg.set_value("vs", "level", vs_level)
+	cfg.set_value("vs", "char", vs_char)
 	for lv in vs_record:
 		cfg.set_value("vs", "w%d" % lv, vs_record[lv][0])
 		cfg.set_value("vs", "l%d" % lv, vs_record[lv][1])

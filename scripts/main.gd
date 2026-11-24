@@ -5,6 +5,7 @@ const TitleScreen := preload("res://scripts/title.gd")
 const GameScreen := preload("res://scripts/game.gd")
 const BoardScreen := preload("res://scripts/leaderboard.gd")
 const VsSelectScreen := preload("res://scripts/vs_select.gd")
+const CharSelectScreen := preload("res://scripts/char_select.gd")
 
 const SCREEN_SIZE := Vector2(540, 960)
 
@@ -24,11 +25,18 @@ func show_game(vs: bool = false, cpu_level: int = 3) -> void:
 	var g := GameScreen.new()
 	g.vs = vs
 	g.cpu_level = cpu_level
+	g.char_id = Settings.vs_char
 	_swap(g)
 
 
 func show_vs_select() -> void:
 	_swap(VsSelectScreen.new())
+
+
+func show_char_select(cpu_level: int) -> void:
+	var s := CharSelectScreen.new()
+	s.cpu_level = cpu_level
+	_swap(s)
 
 
 func show_leaderboard() -> void:
