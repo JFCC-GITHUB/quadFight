@@ -342,6 +342,19 @@ def make_icons():
         ic.stroke([(gx - dx, gy + dy * 0.2 - 0.05), (gx + dx, gy + dy * 0.2 + 0.05)], w=int(ic.S * 0.07))
         ic.d.ellipse((*ic.p(b[0] - 0.045, b[1] - 0.03), *ic.p(b[0] + 0.045, b[1] + 0.06)), fill=255)
     ic.save("swords")
+    make_fullscreen_icons()
+
+
+def make_fullscreen_icons():
+    for name, out in (("fullscreen", False), ("fullscreen_exit", True)):
+        ic = Icon()
+        a, b = (0.38, 0.62) if out else (0.2, 0.8)  # corners sit near the edges, or pulled in to the middle
+        w = int(ic.S * 0.09)
+        for sx, sy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+            cx, cy = (a if sx < 0 else 1 - a), (a if sy < 0 else 1 - a)
+            ix, iy = (sx if out else -sx), (sy if out else -sy)  # arms point away from the middle, or toward it when exiting
+            ic.stroke([(cx + ix * 0.17, cy), (cx, cy), (cx, cy + iy * 0.17)], w=w)
+        ic.save(name)
 
 
 def make_knob(size=64, ss=4):

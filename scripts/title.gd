@@ -4,30 +4,48 @@ const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
 const OptionsScreen := preload("res://scripts/options.gd")
+const Fullscreen := preload("res://scripts/fullscreen.gd")
 
 var main: Node
 var falling: Array = []
 var time := 0.0
 var options_open := false
+var land := false  # 960x540 layout: logo on the left, buttons on the right
 
 
 func _ready() -> void:
 	for i in 12:
-		falling.append(_new_piece(randf_range(-120, 960)))
-	UI.button(self, "PLAY", Rect2(110, 498, 320, 88), func(): main.show_game(), 38,
+		falling.append(_new_piece(randf_range(-120, size.y)))
+	_build()
+
+
+func _build() -> void:
+	for c in get_children():
+		c.queue_free()
+	land = size.x > size.y
+	var x := 560.0 if land else 110.0
+	var ys := [96.0, 194.0, 284.0, 360.0] if land else [498.0, 596.0, 686.0, 764.0]
+	UI.button(self, "PLAY", Rect2(x, ys[0], 320, 88 if not land else 88), func(): main.show_game(), 38,
 		Style.BTN_PRIMARY, "play")
-	UI.button(self, "VS CPU", Rect2(110, 596, 320, 80), func(): main.show_vs_select(), 32,
+	UI.button(self, "VS CPU", Rect2(x, ys[1], 320, 80), func(): main.show_vs_select(), 32,
 		Style.BTN_ACCENT, "swords")
-	UI.button(self, "RANKING", Rect2(110, 686, 320, 68), func(): main.show_leaderboard(), 26,
+	UI.button(self, "RANKING", Rect2(x, ys[2], 320, 68 if not land else 66), func(): main.show_leaderboard(), 26,
 		Style.BTN_GLASS, "trophy")
-	UI.button(self, "OPTIONS", Rect2(110, 764, 320, 68), _open_options, 26,
+	UI.button(self, "OPTIONS", Rect2(x, ys[3], 320, 68 if not land else 66), _open_options, 26,
 		Style.BTN_GLASS, "gear")
+	UI.icon_button(self, "fullscreen", Rect2(size.x - 68, 16, 52, 52), func(): Fullscreen.toggle(self), Style.BTN_GLASS)
+
+
+## Called by Main when the window is rotated.
+func relayout() -> void:
+	if not options_open:
+		_build()
 
 
 func _new_piece(y: float) -> Dictionary:
 	return {
 		"kind": randi() % 7, "rot": randi() % 4,
-		"x": randf_range(-30, 500), "y": y,
+		"x": randf_range(-30, size.x - 40.0), "y": y,
 		"speed": randf_range(25, 70), "cell": randf_range(16, 30),
 		"spin": randf_range(-0.3, 0.3), "angle": randf() * TAU,
 	}
@@ -38,7 +56,7 @@ func _process(delta: float) -> void:
 	for p in falling:
 		p["y"] += p["speed"] * delta
 		p["angle"] += p["spin"] * delta
-		if p["y"] > 1000:
+		if p["y"] > size.y + 40.0:
 			p.merge(_new_piece(-120), true)
 	queue_redraw()
 
@@ -47,6 +65,10 @@ func _open_options() -> void:
 	options_open = true
 	var o := OptionsScreen.new()
 	o.on_close = func(): options_open = false
+	if land:  # the options screen is a 540x960 portrait page: fit it to the height
+		var sc := size.y / 960.0
+		o.scale = Vector2(sc, sc)
+		o.position = Vector2((size.x - 540.0 * sc) * 0.5, 0)
 	add_child(o)
 
 
@@ -58,7 +80,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	draw_texture_rect(Style.bg_texture(), Rect2(Vector2.ZERO, size), false)
+	Style.draw_bg(self, size)
 	for p in falling:
 		var cell: float = p["cell"]
 		var center := Vector2(p["x"], p["y"])
@@ -69,13 +91,14 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 
 	# Logo
-	var logo_w := 490.0
+	var logo_w := 400.0 if land else 490.0
 	var logo_h: float = logo_w * Style.LOGO.get_height() / Style.LOGO.get_width()
 	var bob := sin(time * 1.8) * 6.0
-	draw_texture_rect(Style.LOGO, Rect2((size.x - logo_w) * 0.5, 150 + bob, logo_w, logo_h), false)
+	var cx := 280.0 if land else size.x * 0.5
+	draw_texture_rect(Style.LOGO, Rect2(cx - logo_w * 0.5, (64 if land else 150) + bob, logo_w, logo_h), false)
 
 	# Best score pill
-	var pill := Rect2(150, 436, 240, 50)
+	var pill := Rect2(cx - 120.0, 336 if land else 436, 240, 50)
 	draw_style_box(Style.panel_box(Color(0, 0, 0, 0.35), 27, Color(1, 0.83, 0.3, 0.35)), pill)
 	Style.draw_icon(self, "trophy", pill.position + Vector2(34, 27), 26, Style.GOLD)
 	var best := Scores.best()
@@ -85,7 +108,7 @@ func _draw() -> void:
 
 	# Controls hint
 	var f := Style.FONT_SEMI
-	var y := 866.0
+	var y := 456.0 if land else 866.0
 	for line in ["Keyboard   Arrows · Space drop · C hold · P pause",
 			"Gamepad   D-pad · A / B rotate · X hold · Start",
 			"Touch   on-screen buttons"]:
