@@ -19,6 +19,18 @@ var landscape_ok := false  # the current screen has a landscape layout
 ## mode "tournament": every other fighter once, in random order, one level harder each time.
 var run := {}
 
+## Tournament difficulty: the CPU level range, spread evenly over the 5 fights.
+const TOUR_NAMES := ["EASY", "NORMAL", "HARD"]
+const TOUR_RANGES := [[1, 10], [6, 15], [11, 20]]
+
+
+static func tour_levels(diff: int, fights: int = 5) -> Array:
+	var out: Array = []
+	var r: Array = TOUR_RANGES[diff]
+	for i in fights:
+		out.append(roundi(lerpf(r[0], r[1], float(i) / maxf(fights - 1, 1))))
+	return out
+
 
 func _ready() -> void:
 	_setup_input()
@@ -54,6 +66,7 @@ func show_char_select(level: int, mode: String, step: int = 0) -> void:
 
 
 ## Fighters are chosen: set up the run and show the "versus" intro.
+## `level` is the starting CPU level for the ladder, or the difficulty index (0-2) for the tournament.
 func start_run(mode: String, level: int) -> void:
 	var player: String = Settings.vs_char
 	run = {"mode": mode, "player": player, "level": level, "base": level, "round": 0, "order": [], "cpu": ""}
@@ -65,6 +78,8 @@ func start_run(mode: String, level: int) -> void:
 		ids.shuffle()
 		run["order"] = ids
 		run["cpu"] = ids[0]
+		run["levels"] = tour_levels(level, ids.size())
+		run["level"] = run["levels"][0]
 	else:
 		run["cpu"] = Characters.random_other(player) if Settings.vs_cpu_char == "random" else Settings.vs_cpu_char
 	show_intro()
@@ -86,7 +101,7 @@ func next_fight() -> void:
 			show_intro(true)
 			return
 		run["cpu"] = run["order"][run["round"]]
-		run["level"] = mini(run["base"] + run["round"], CpuPlayer.MAX_LEVEL)
+		run["level"] = run["levels"][run["round"]]
 	else:
 		run["level"] = mini(run["level"] + 1, CpuPlayer.MAX_LEVEL)
 		Settings.vs_level = run["level"]
