@@ -10,15 +10,15 @@ const LIST := [
 	{"id": "bastion", "name": "BASTION", "color": "4ab0ff", "need": {1: 2, 3: 1}, "skill": "IRON WALL",
 		"desc": "A heavy wall falls and scatters like sand over the stack."},
 	{"id": "blaze", "name": "BLAZE", "color": "ff7a2a", "need": {1: 3}, "skill": "FIRE RAIN",
-		"desc": "10 single blocks pour onto random columns."},
+		"desc": "6 single blocks pour onto random columns."},
 	{"id": "frost", "name": "FROST", "color": "58c8f8", "need": {2: 2}, "skill": "ICE SPIKES",
 		"desc": "4-high pillars grow on the two lowest columns."},
-	{"id": "volt", "name": "VOLT", "color": "ffc21a", "need": {1: 1, 2: 1, 3: 1}, "skill": "LIGHTNING",
-		"desc": "Two 6-block lightning bolts strike, left and right."},
+	{"id": "volt", "name": "VOLT", "color": "ffc21a", "need": {1: 1, 3: 1}, "skill": "LIGHTNING",
+		"desc": "Two 8-block lightning bolts strike, left and right."},
 	{"id": "shade", "name": "SHADE", "color": "c040ff", "need": {1: 1, 2: 2}, "skill": "CHECKERS",
 		"desc": "2 hole-punched checkerboard rows rise from below."},
 	{"id": "titan", "name": "TITAN", "color": "a8e83a", "need": {4: 1}, "skill": "BOULDER",
-		"desc": "A 3x3 boulder slams down in the middle."},
+		"desc": "A huge 5x5 boulder slams down in the middle."},
 ]
 
 const PORTRAITS := {
@@ -96,11 +96,12 @@ static func apply(id: String, board: Array) -> bool:
 		"bastion":
 			return _sand(board, 30)
 		"blaze":
-			return _rain(board, 10)
+			return _rain(board, 6)
 		"frost":
 			return _pillars(board)
 		"volt":
-			var bolt := [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(0, 2), Vector2i(1, 2)]
+			var bolt := [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1),
+				Vector2i(1, 2), Vector2i(2, 2), Vector2i(0, 3), Vector2i(1, 3)]
 			return _drop(board, bolt, 1) and _drop(board, bolt, 6)
 		"shade":
 			var a: Array = []
@@ -111,10 +112,10 @@ static func apply(id: String, board: Array) -> bool:
 			return _push(board, [a, b])
 		"titan":
 			var cells: Array = []
-			for yy in 3:
-				for xx in 3:
+			for yy in 5:
+				for xx in 5:
 					cells.append(Vector2i(xx, yy))
-			return _drop(board, cells, 4)
+			return _drop(board, cells, randi_range(2, 3))
 	return true
 
 
