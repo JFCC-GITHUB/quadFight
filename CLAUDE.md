@@ -55,6 +55,10 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   operations shared by player and CPU), `char_select.gd` (after the level picker), `portrait.gd` / `fx_layer.gd`
   (nearest-filtered pixel art + 8-frame strip animations). Art comes from `tools/gen_characters.py` (96px pixel busts,
   5x nearest) and `tools/gen_fx.py` (`assets/fx/<char>_<cast|hit>.png`); re-run them and `godot --headless --import`.
+- Landscape (phones turned sideways): `main.gd` switches the window's `content_scale_size` between 540x960 and 960x540
+  (only the game screen has a landscape layout; menus stay portrait, pillarboxed). `game.gd` draws its portrait
+  layout through a scale+offset transform (`_layout`, `_view_xf`, `_to_screen`) and `TouchLayout.buttons(..., landscape)`
+  moves the control clusters to the bottom corners; `relayout()` runs on rotation without losing the game.
 - SFX have two styles (`arcade`, `soft`) built lazily in `sfx.gd`; all sound names must exist in both banks.
 - Colour themes and backgrounds are defined ONLY in `tools/gen_assets.py` (`THEMES`, `BACKGROUNDS`).
   It writes `assets/blocks/<theme>_<kind>.png`, `assets/bg_<id>.jpg` and `assets/themes.json`;

@@ -112,6 +112,14 @@ static func bg_texture() -> Texture2D:
 	return _bg_cache[id]
 
 
+## Draws the background cropped to cover `sz` (so a landscape screen is not stretched).
+static func draw_bg(ci: CanvasItem, sz: Vector2) -> void:
+	var tex := bg_texture()
+	var ts := tex.get_size()
+	var src := sz / maxf(sz.x / ts.x, sz.y / ts.y)
+	ci.draw_texture_rect_region(tex, Rect2(Vector2.ZERO, sz), Rect2((ts - src) / 2.0, src))
+
+
 ## Letter-spaced small caps font for captions.
 static func caption_font() -> Font:
 	if _label_font == null:

@@ -8,7 +8,7 @@ const LAYOUTS := ["snes", "classic", "thumbs"]
 
 
 ## Returns [{name, icon, rect, held, scheme}] for the given layout.
-static func buttons(layout: String, swap_sides: bool) -> Array:
+static func buttons(layout: String, swap_sides: bool, landscape: bool = false) -> Array:
 	var g := Style.BTN_GLASS
 	var list: Array
 	# "left" cluster = x 12..264, "right" cluster = x 276..528 (before swapping).
@@ -50,6 +50,9 @@ static func buttons(layout: String, swap_sides: bool) -> Array:
 			if layout == "snes": # mirror each cluster to the other edge
 				shift = 314.0 if b["cluster"] == 0 else -272.0
 			b["rect"].position.x += shift
+	if landscape:  # 960x540: clusters sit in the bottom corners (portrait coordinates are 540 wide, 960 tall)
+		for b in list:
+			b["rect"].position += Vector2(420.0 if b["rect"].get_center().x > 270.0 else 0.0, -414.0)
 	if layout == "snes":
 		var pad := Rect2()
 		for i in 4:

@@ -7,13 +7,16 @@ const BoardScreen := preload("res://scripts/leaderboard.gd")
 const VsSelectScreen := preload("res://scripts/vs_select.gd")
 const CharSelectScreen := preload("res://scripts/char_select.gd")
 
-const SCREEN_SIZE := Vector2(540, 960)
+const PORTRAIT := Vector2(540, 960)
+const LANDSCAPE := Vector2(960, 540)
 
 var current: Control
+var landscape_ok := false  # the current screen has a landscape layout
 
 
 func _ready() -> void:
 	_setup_input()
+	get_window().size_changed.connect(_on_resized)
 	show_title()
 
 
@@ -26,7 +29,7 @@ func show_game(vs: bool = false, cpu_level: int = 3) -> void:
 	g.vs = vs
 	g.cpu_level = cpu_level
 	g.char_id = Settings.vs_char
-	_swap(g)
+	_swap(g, true)
 
 
 func show_vs_select() -> void:
@@ -43,12 +46,33 @@ func show_leaderboard() -> void:
 	_swap(BoardScreen.new())
 
 
-func _swap(screen: Control) -> void:
+## Logical size: landscape only for screens that support it, and only while the window is wider than tall.
+func _screen_size() -> Vector2:
+	var w := get_window().size
+	return LANDSCAPE if landscape_ok and w.x > w.y else PORTRAIT
+
+
+func _on_resized() -> void:
+	_apply_orientation.call_deferred()  # the window finishes its own resize first
+
+
+func _apply_orientation() -> void:
+	if current == null or Vector2i(_screen_size()) == get_window().content_scale_size:
+		return
+	get_window().content_scale_size = Vector2i(_screen_size())
+	current.size = _screen_size()
+	if current.has_method("relayout"):
+		current.relayout()
+
+
+func _swap(screen: Control, allow_landscape: bool = false) -> void:
 	if current:
 		current.queue_free()
 	current = screen
+	landscape_ok = allow_landscape
+	get_window().content_scale_size = Vector2i(_screen_size())
 	screen.set("main", self)
-	screen.size = SCREEN_SIZE
+	screen.size = _screen_size()
 	add_child(screen)
 	screen.modulate.a = 0.0
 	screen.create_tween().tween_property(screen, "modulate:a", 1.0, 0.2)

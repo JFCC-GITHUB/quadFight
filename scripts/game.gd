@@ -48,6 +48,11 @@ var cpu_have: Dictionary = {}
 var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
 var fx_layer: Control
 var special_flash := 0.0
+var landscape := false          # 960x540: the portrait layout is scaled and centred, controls sit in the corners
+var view_scale := 1.0
+var view_off := Vector2.ZERO
+var player_portrait: Control
+var cpu_portrait: Control
 
 var board: Array = []
 var bag: Array = []
@@ -104,6 +109,7 @@ var soft_lock := false  # soft drop held through a lock: ignored until released,
 
 
 func _ready() -> void:
+	_layout()
 	_apply_settings()
 	for r in ROWS:
 		board.append(_empty_row())
@@ -112,19 +118,16 @@ func _ready() -> void:
 		cpu.on_clear = _on_cpu_clear
 		cpu_char = Characters.random_other(char_id)
 		cpu.on_special = _on_cpu_special
-		var pp := Portrait.new()
-		pp.position = Vector2(14, 428)
-		pp.size = Vector2(96, 96)
-		pp.set_char(char_id)
-		add_child(pp)
-		var cp := Portrait.new()
-		cp.position = Vector2(430, 594)
-		cp.size = Vector2(96, 96)
-		cp.set_char(cpu_char)
-		add_child(cp)
+		player_portrait = Portrait.new()
+		player_portrait.set_char(char_id)
+		add_child(player_portrait)
+		cpu_portrait = Portrait.new()
+		cpu_portrait.set_char(cpu_char)
+		add_child(cpu_portrait)
 		fx_layer = FxLayer.new()
 		fx_layer.size = size
 		add_child(fx_layer)
+		_place_nodes()
 	_spawn()
 	Sfx.start_music()
 
@@ -133,9 +136,54 @@ func _exit_tree() -> void:
 	Sfx.stop_music()
 
 
+## Portrait content (x 12..528, y 112..712) is drawn through a transform: as is in portrait, centred and
+## shrunk to fit the height in landscape.
+func _layout() -> void:
+	landscape = size.x > size.y
+	view_scale = 0.86 if landscape else 1.0
+	view_off = Vector2((size.x - 540.0 * view_scale) * 0.5, (size.y - 600.0 * view_scale) * 0.5 - 112.0 * view_scale) if landscape else Vector2.ZERO
+
+
+func _view_xf(shake: Vector2 = Vector2.ZERO) -> Transform2D:
+	return Transform2D(Vector2(view_scale, 0), Vector2(0, view_scale), view_off + shake)
+
+
+## A rect in portrait-layout coordinates -> screen coordinates.
+func _to_screen(r: Rect2) -> Rect2:
+	return Rect2(view_off + r.position * view_scale, r.size * view_scale)
+
+
+func _place_nodes() -> void:
+	if not vs:
+		return
+	var pr := _to_screen(Rect2(14, 428, 96, 96))
+	player_portrait.position = pr.position
+	player_portrait.size = pr.size
+	var cr := _to_screen(Rect2(430, 594, 96, 96))
+	cpu_portrait.position = cr.position
+	cpu_portrait.size = cr.size
+
+
+func _play_fx(tex: Texture2D, rect: Rect2, fps: float) -> void:
+	fx_layer.play(tex, _to_screen(rect), fps)
+
+
+## Called by Main when the window is rotated while playing.
+func relayout() -> void:
+	_layout()
+	_apply_settings()
+	if vs:
+		fx_layer.size = size
+		fx_layer.clear()
+		_place_nodes()
+	if state == State.PAUSED and overlay != null:
+		state = paused_from
+		_toggle_pause()
+
+
 ## (Re)reads options: touch layout, auto-repeat speed. Called at start and after the options screen.
 func _apply_settings() -> void:
-	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides)
+	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides, landscape)
 	_btn_styles.clear()
 	for b in touch_buttons:
 		_btn_styles[b["rect"].position] = [Style.button_box(b["scheme"], false, b["radius"]), Style.button_box(b["scheme"], true, b["radius"])]
@@ -607,7 +655,7 @@ func _fire_special(from_player: bool) -> void:
 	var id := char_id if from_player else cpu_char
 	var d := Characters.def(id)
 	var at := Rect2(-6, 410, 124, 124) if from_player else Rect2(416, 576, 124, 124)
-	fx_layer.play(Characters.FX_CAST[id], at, 14.0)
+	_play_fx(Characters.FX_CAST[id], at, 14.0)
 	_popup(d["skill"] + "!", Color(d["color"]))
 	special_flash = 1.0
 	Sfx.play("levelup")
@@ -619,7 +667,7 @@ func _fire_special(from_player: bool) -> void:
 
 ## The player's special landed on the CPU board: hit animation over its mini board.
 func _on_cpu_special(id: String) -> void:
-	fx_layer.play(Characters.FX_HIT[id], Rect2(418, 431, 120, 120), 12.0)
+	_play_fx(Characters.FX_HIT[id], Rect2(418, 431, 120, 120), 12.0)
 	_shake(0.2, 3.0)
 	Sfx.play("hit")
 
@@ -640,7 +688,7 @@ func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
 func _apply_incoming() -> bool:
 	if not special_in.is_empty():
 		for sid in special_in:
-			fx_layer.play(Characters.FX_HIT[sid], Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
+			_play_fx(Characters.FX_HIT[sid], Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
 			if not Characters.apply(sid, board):
 				special_in.clear()
 				_game_over()
@@ -729,6 +777,10 @@ func _open_options() -> void:
 	o.on_close = func():
 		options_open = false
 		_apply_settings()
+	if landscape:  # the options screen is a 540x960 portrait page: fit it to the height
+		var s := size.y / 960.0
+		o.scale = Vector2(s, s)
+		o.position = Vector2((size.x - 540.0 * s) * 0.5, 0)
 	add_child(o)
 
 
@@ -870,7 +922,16 @@ func _open_overlay(card_rect: Rect2) -> Panel:
 	overlay.add_child(dim)
 	dim.modulate.a = 0.0
 	dim.create_tween().tween_property(dim, "modulate:a", 1.0, 0.2)
-	var c := UI.card(overlay, card_rect)
+	var holder: Node = overlay
+	if landscape:  # centre the card and shrink it to fit the lower screen
+		var s := minf(1.0, (size.y - 20.0) / card_rect.size.y)
+		var h := Control.new()
+		h.scale = Vector2(s, s)
+		h.position = (size - card_rect.size * s) * 0.5
+		overlay.add_child(h)
+		holder = h
+		card_rect.position = Vector2.ZERO
+	var c := UI.card(holder, card_rect)
 	UI.pop_in(c)
 	return c
 
@@ -903,17 +964,19 @@ func _danger() -> bool:
 
 
 func _draw() -> void:
-	draw_texture_rect(Style.bg_texture(), Rect2(Vector2.ZERO, size), false)
+	Style.draw_bg(self, size)
 	_draw_header()
+	draw_set_transform_matrix(_view_xf())
 	_draw_side_panels()
 
 	# Everything on/over the board shakes together.
 	if shake_time > 0.0:
 		var m := shake_mag * shake_time / shake_dur
-		draw_set_transform(Vector2(randf_range(-m, m), randf_range(-m, m)))
+		draw_set_transform_matrix(_view_xf(Vector2(randf_range(-m, m), randf_range(-m, m))))
 	_draw_board()
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform_matrix(_view_xf())
 	_draw_projectiles()
+	draw_set_transform_matrix(Transform2D.IDENTITY)
 
 	_draw_touch_buttons()
 
@@ -925,17 +988,20 @@ func _draw_header() -> void:
 	Style.draw_icon(self, "pause", PAUSE_RECT.get_center() + Vector2(0, 2 if pressed else -2), 28)
 	# Score
 	var cap := Style.caption_font()
-	Style.text(self, cap, Vector2(0, 42), "SCORE", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 88), str(int(round(display_score))), 40, Style.TEXT,
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
+	var sx := 80.0 if landscape else 0.0   # score block: centred in portrait, beside the pause button in landscape
+	var sw := 170.0 if landscape else size.x
+	var al := HORIZONTAL_ALIGNMENT_LEFT if landscape else HORIZONTAL_ALIGNMENT_CENTER
+	var rx := size.x - 140.0
+	Style.text(self, cap, Vector2(sx, 42), "SCORE", 16, Style.MUTED, al, sw)
+	Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 88), str(int(round(display_score))), 40, Style.TEXT, al, sw, 8)
 	if vs:
-		Style.text(self, cap, Vector2(400, 42), "VS CPU", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
-		Style.text(self, Style.FONT_DISPLAY, Vector2(400, 74), "Lv %d" % cpu_level, 22, Style.CYAN,
+		Style.text(self, cap, Vector2(rx, 42), "VS CPU", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+		Style.text(self, Style.FONT_DISPLAY, Vector2(rx, 74), "Lv %d" % cpu_level, 22, Style.CYAN,
 			HORIZONTAL_ALIGNMENT_RIGHT, 124)
 	else:
 		var best := maxi(Scores.best(), score)
-		Style.text(self, cap, Vector2(400, 42), "BEST", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
-		Style.text(self, Style.FONT_DISPLAY, Vector2(400, 74), str(best), 22, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+		Style.text(self, cap, Vector2(rx, 42), "BEST", 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 124)
+		Style.text(self, Style.FONT_DISPLAY, Vector2(rx, 74), str(best), 22, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, 124)
 
 
 func _side_panel(rect: Rect2, title: String) -> void:
