@@ -5,16 +5,17 @@ extends RefCounted
 const COLS := 10
 const ROWS := 20
 const GARBAGE := 7  # board value of a garbage block
+const WALL_LIFE := 3  # pieces the victim locks before an iron wall crumbles
 
 const LIST := [
-	{"id": "bastion", "name": "BASTION", "color": "4ab0ff", "need": {1: 3}, "skill": "IRON WALL",
-		"desc": "3 rows with one shared gap rise from below."},
-	{"id": "blaze", "name": "BLAZE", "color": "ff7a2a", "need": {1: 2, 2: 1}, "skill": "FIRE RAIN",
+	{"id": "bastion", "name": "BASTION", "color": "4ab0ff", "need": {1: 2, 3: 1}, "skill": "IRON WALL",
+		"desc": "A solid 3-row wall rises from below, then crumbles."},
+	{"id": "blaze", "name": "BLAZE", "color": "ff7a2a", "need": {1: 3}, "skill": "FIRE RAIN",
 		"desc": "10 single blocks pour onto random columns."},
 	{"id": "frost", "name": "FROST", "color": "58c8f8", "need": {2: 2}, "skill": "ICE SPIKES",
 		"desc": "4-high pillars grow on the two lowest columns."},
-	{"id": "volt", "name": "VOLT", "color": "ffc21a", "need": {1: 1, 3: 1}, "skill": "LIGHTNING",
-		"desc": "An 8-block lightning zigzag strikes the middle."},
+	{"id": "volt", "name": "VOLT", "color": "ffc21a", "need": {1: 1, 2: 1, 3: 1}, "skill": "LIGHTNING",
+		"desc": "Two 6-block lightning bolts strike, left and right."},
 	{"id": "shade", "name": "SHADE", "color": "c040ff", "need": {1: 1, 2: 2}, "skill": "CHECKERS",
 		"desc": "2 hole-punched checkerboard rows rise from below."},
 	{"id": "titan", "name": "TITAN", "color": "a8e83a", "need": {4: 1}, "skill": "BOULDER",
@@ -94,18 +95,17 @@ static func progress(id: String, have: Dictionary) -> float:
 static func apply(id: String, board: Array) -> bool:
 	match id:
 		"bastion":
-			var gap := randi_range(0, COLS - 1)
 			var row: Array = []
 			for x in COLS:
-				row.append(-1 if x == gap else GARBAGE)
+				row.append(GARBAGE)
 			return _push(board, [row, row, row])
 		"blaze":
 			return _rain(board, 10)
 		"frost":
 			return _pillars(board)
 		"volt":
-			return _drop(board, [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1),
-				Vector2i(1, 2), Vector2i(2, 2), Vector2i(0, 3), Vector2i(1, 3)], 4)
+			var bolt := [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(0, 2), Vector2i(1, 2)]
+			return _drop(board, bolt, 1) and _drop(board, bolt, 6)
 		"shade":
 			var a: Array = []
 			var b: Array = []
@@ -120,6 +120,34 @@ static func apply(id: String, board: Array) -> bool:
 					cells.append(Vector2i(xx, yy))
 			return _drop(board, cells, 4)
 	return true
+
+
+## A row made only of garbage is a wall: it is never cleared by the line check.
+static func is_clearable(row: Array) -> bool:
+	if row.has(-1):
+		return false
+	for v in row:
+		if v != GARBAGE:
+			return true
+	return false
+
+
+## Removes every wall row (solid garbage); returns how many.
+static func crumble(board: Array) -> int:
+	var n := 0
+	var y := ROWS - 1
+	while y >= 0:
+		var solid: bool = not board[y].has(-1)
+		for v in board[y]:
+			if v != GARBAGE:
+				solid = false
+		if solid:
+			board.remove_at(y)
+			board.push_front([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1])
+			n += 1
+		else:
+			y -= 1
+	return n
 
 
 ## Pushes whole rows in from the bottom; false if existing blocks were pushed off the top.

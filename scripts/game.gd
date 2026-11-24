@@ -45,6 +45,7 @@ var char_id := "bastion"    # player's fighter (special attack, see characters.g
 var cpu_char := "blaze"
 var have: Dictionary = {}      # line-clear sizes collected toward the player's special attack
 var cpu_have: Dictionary = {}
+var wall_left := 0             # pieces until an iron wall on the player board crumbles
 var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
 var fx_layer: Control
 var special_flash := 0.0
@@ -486,9 +487,13 @@ func _lock(play_sound := true) -> void:
 			board[p.y][p.x] = kind
 			topped_out = false
 			flashes.append({"c": p, "t": 0.22})
+	if wall_left > 0:
+		wall_left -= 1
+		if wall_left == 0:
+			_crumble_wall()
 	var full: Array = []
 	for y in ROWS:
-		if not board[y].has(-1):
+		if Characters.is_clearable(board[y]):
 			full.append(y)
 	if not full.is_empty():
 		_begin_clear(full)
@@ -502,6 +507,25 @@ func _lock(play_sound := true) -> void:
 	if vs and not _apply_incoming():
 		return
 	_spawn()
+
+
+## The iron wall's time is up: its solid rows burst apart.
+func _crumble_wall() -> void:
+	for y in ROWS:
+		var solid: bool = not board[y].has(-1)
+		for v in board[y]:
+			if v != Characters.GARBAGE:
+				solid = false
+		if solid:
+			for x in COLS:
+				var center := BOARD_POS + Vector2(x + 0.5, y + 0.5) * CELL
+				particles.append({"pos": center, "vel": Vector2(randf_range(-200, 200), randf_range(-300, -60)),
+					"life": randf_range(0.4, 0.8), "max": 0.8, "color": Style.piece_color(Characters.GARBAGE),
+					"size": randf_range(4, 8)})
+	if Characters.crumble(board) > 0:
+		_popup("WALL BROKEN", Style.CYAN)
+		Sfx.play("clear2")
+		_shake(0.25, 5.0)
 
 
 func _begin_clear(rows: Array) -> void:
@@ -645,6 +669,8 @@ func _apply_incoming() -> bool:
 				special_in.clear()
 				_game_over()
 				return false
+			if sid == "bastion":
+				wall_left = Characters.WALL_LIFE
 		special_in.clear()
 		Sfx.play("hit")
 		_shake(0.35, 7.0)
