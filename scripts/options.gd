@@ -6,13 +6,14 @@ const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const TouchLayout := preload("res://scripts/touch_layout.gd")
 
-const TABS := ["COLORS", "SOUND", "CONTROLS"]
+const TABS := ["COLORS", "SOUND", "TOUCH", "KEYS"]
 const PANEL := Rect2(16, 196, 508, 640)
 
 var on_close: Callable = func(): pass
 var tab := 0
 var content: Control
 var tab_row: Control
+var listening: Array = []  # [action, slot] while waiting for a key press
 
 
 func _ready() -> void:
@@ -43,7 +44,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_tabs() -> void:
 	for c in tab_row.get_children():
 		c.queue_free()
-	var w := (508.0 - 16.0) / 3.0
+	var w := (508.0 - 8.0 * (TABS.size() - 1)) / TABS.size()
 	for i in TABS.size():
 		var scheme := Style.BTN_PRIMARY if i == tab else Style.BTN_GLASS
 		var idx := i
@@ -68,6 +69,7 @@ func _build_tab() -> void:
 		0: _build_colors()
 		1: _build_sound()
 		2: _build_controls()
+		3: _build_keys()
 	queue_redraw()
 
 
@@ -254,6 +256,46 @@ func _build_controls() -> void:
 	_caption("GHOST PIECE", 526)
 	_segment(554, ["ON", "OFF"], 0 if Settings.ghost else 1, func(i): Settings.ghost = i == 0)
 	_caption("PREVIEW", 634)
+
+
+# ---------------------------------------------------------------- KEYS
+
+func _build_keys() -> void:
+	_caption("CONTROLS SHOWN IN GAME", 214)
+	_segment(242, ["AUTO", "TOUCH", "KEYBOARD"], ["auto", "touch", "keys"].find(Settings.control_mode),
+		func(i): Settings.control_mode = ["auto", "touch", "keys"][i])
+	_caption("KEYBOARD  (tap a slot, press a key;  DEL clears)", 318)
+	var y := 350.0
+	for a in Settings.ACTIONS:
+		var act: String = a[0]
+		UI.label(content, a[1], Rect2(32, y, 150, 42), 17, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT, Style.FONT_BOLD)
+		var slots: Array = Settings.key_slots(act)
+		for i in Settings.KEY_SLOTS:
+			var slot := i
+			var waiting := listening == [act, slot]
+			UI.button(content, "PRESS..." if waiting else Settings.key_name(slots[i]),
+				Rect2(184 + i * 109, y, 101, 42),
+				func():
+					listening = [act, slot]
+					_rebuild_soon(), 16, Style.BTN_ACCENT if waiting else Style.BTN_GLASS)
+		y += 50.0
+	UI.button(content, "RESET KEYS", Rect2(32, y + 8, 476, 56), func():
+		listening = []
+		Settings.reset_keys()
+		_rebuild_soon(), 20, Style.BTN_GLASS)
+
+
+func _input(event: InputEvent) -> void:
+	if listening.is_empty() or not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	get_viewport().set_input_as_handled()
+	var code: int = event.physical_keycode
+	if code == KEY_BACKSPACE or code == KEY_DELETE:
+		Settings.set_key(listening[0], listening[1], 0)
+	elif code != KEY_ESCAPE:  # Esc only cancels
+		Settings.set_key(listening[0], listening[1], code)
+	listening = []
+	_rebuild_soon()
 
 
 func _draw() -> void:

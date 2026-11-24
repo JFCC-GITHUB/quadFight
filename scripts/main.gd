@@ -79,15 +79,16 @@ func _swap(screen: Control, allow_landscape: bool = false) -> void:
 
 
 func _setup_input() -> void:
-	_action("move_left", [KEY_LEFT, KEY_A], [JOY_BUTTON_DPAD_LEFT], [[JOY_AXIS_LEFT_X, -1.0]])
-	_action("move_right", [KEY_RIGHT, KEY_D], [JOY_BUTTON_DPAD_RIGHT], [[JOY_AXIS_LEFT_X, 1.0]])
-	_action("soft_drop", [KEY_DOWN, KEY_S], [JOY_BUTTON_DPAD_DOWN], [[JOY_AXIS_LEFT_Y, 1.0]])
-	_action("hard_drop", [KEY_SPACE], [JOY_BUTTON_DPAD_UP, JOY_BUTTON_Y], [])
-	_action("rotate_cw", [KEY_UP, KEY_X, KEY_W], [JOY_BUTTON_A, JOY_BUTTON_RIGHT_SHOULDER], [])
-	_action("rotate_ccw", [KEY_Z, KEY_CTRL], [JOY_BUTTON_B, JOY_BUTTON_LEFT_SHOULDER], [])
-	_action("hold", [KEY_C, KEY_SHIFT], [JOY_BUTTON_X], [])
-	_action("pause", [KEY_P, KEY_ESCAPE], [JOY_BUTTON_START], [])
+	_action("move_left", [], [JOY_BUTTON_DPAD_LEFT], [[JOY_AXIS_LEFT_X, -1.0]])
+	_action("move_right", [], [JOY_BUTTON_DPAD_RIGHT], [[JOY_AXIS_LEFT_X, 1.0]])
+	_action("soft_drop", [], [JOY_BUTTON_DPAD_DOWN], [[JOY_AXIS_LEFT_Y, 1.0]])
+	_action("hard_drop", [], [JOY_BUTTON_DPAD_UP, JOY_BUTTON_Y], [])
+	_action("rotate_cw", [], [JOY_BUTTON_A, JOY_BUTTON_RIGHT_SHOULDER], [])
+	_action("rotate_ccw", [], [JOY_BUTTON_B, JOY_BUTTON_LEFT_SHOULDER], [])
+	_action("hold", [], [JOY_BUTTON_X], [])
+	_action("pause", [], [JOY_BUTTON_START], [])
 	_action("confirm", [KEY_ENTER, KEY_KP_ENTER], [JOY_BUTTON_A, JOY_BUTTON_START], [])
+	Settings.apply_keys()  # the rebindable keyboard keys (Options -> KEYS)
 
 
 func _action(action: String, keys: Array, buttons: Array, axes: Array) -> void:

@@ -59,6 +59,10 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   (only the game screen has a landscape layout; menus stay portrait, pillarboxed). `game.gd` draws its portrait
   layout through a scale+offset transform (`_layout`, `_view_xf`, `_to_screen`) and `TouchLayout.buttons(..., landscape)`
   moves the control clusters to the bottom corners; `relayout()` runs on rotation without losing the game.
+- Phone vs computer: `Settings.use_touch()` (web: `pointer: coarse`; override in Options -> KEYS "controls shown in game")
+  decides between the touch buttons and keyboard hints (`_draw_key_hints`). Keyboard bindings (3 slots per action) are
+  `Settings.keys` / `DEFAULT_KEYS`, applied to the InputMap by `Settings.apply_keys()`. In VS the CPU panel (`cpu_rect`,
+  screen coordinates, never scaled) is larger on computers / in landscape.
 - SFX have two styles (`arcade`, `soft`) built lazily in `sfx.gd`; all sound names must exist in both banks.
 - Colour themes and backgrounds are defined ONLY in `tools/gen_assets.py` (`THEMES`, `BACKGROUNDS`).
   It writes `assets/blocks/<theme>_<kind>.png`, `assets/bg_<id>.jpg` and `assets/themes.json`;
