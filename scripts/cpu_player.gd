@@ -64,15 +64,18 @@ static func params(lv: int) -> Dictionary:
 	var t := clampf(float(lv - 1) / 9.0, 0.0, 1.0)
 	var u := clampf(float(lv - 10) / 10.0, 0.0, 1.0)  # levels 11-20 keep getting faster
 	var e := pow(t, 0.8)
+	# Looking one piece ahead (level 11) is a big jump in strength, so the levels right after it are slower and
+	# sloppier; the handicap fades out by level 16.
+	var h := clampf(1.0 - float(lv - LOOKAHEAD_FROM) / 5.0, 0.0, 1.0) if lv >= LOOKAHEAD_FROM else 0.0
 	return {
-		"think": lerpf(lerpf(1.5, 0.45, e), 0.12, u),    # see the piece + decide, after it appears (s)
-		"key": lerpf(lerpf(0.55, 0.17, e), 0.085, u),    # time between two key taps (s)
+		"think": lerpf(lerpf(1.5, 0.45, e), 0.12, u) * (1.0 + 0.8 * h),    # see the piece + decide, after it appears (s)
+		"key": lerpf(lerpf(0.55, 0.17, e), 0.085, u) * (1.0 + 0.4 * h),    # time between two key taps (s)
 		"das": lerpf(lerpf(0.30, 0.15, t), 0.11, u),     # hold a direction: delay before it auto-repeats (s)
 		"arr": lerpf(lerpf(0.10, 0.05, t), 0.03, u),     # auto-repeat interval (s)
-		"drop": lerpf(lerpf(0.25, 0.12, e), 0.05, u),    # pause to check the result before hard drop (s)
-		"slip": lerpf(0.08, 0.004, e),                   # chance a finger hits the wrong key or count
+		"drop": lerpf(lerpf(0.25, 0.12, e), 0.05, u) * (1.0 + 0.5 * h),    # pause to check the result before hard drop (s)
+		"slip": lerpf(0.08, 0.004, e) * (1.0 + h),       # chance a finger hits the wrong key or count
 		"blind": lerpf(0.4, 0.05, e),                    # chance a slip goes unnoticed
-		"mistake": MISTAKE[clampi(lv - 1, 0, MAX_LEVEL - 1)],   # chance to pick a bad placement
+		"mistake": MISTAKE[clampi(lv - 1, 0, MAX_LEVEL - 1)] * (1.0 + 3.0 * h),   # chance to pick a bad placement
 	}
 
 
