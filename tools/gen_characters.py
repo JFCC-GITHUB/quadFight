@@ -313,14 +313,14 @@ def skill_icons():
     ic.save("sk_boulder")
 
 
-def dark_variant(im):
+def dark_variant(im, strict=False):
     """The 'dark self': luminance mapped onto black / purple / crimson, glowing parts (eyes, gems) turned red."""
     a = np.array(im).astype(np.float32)
     rgb, alpha = a[..., :3] / 255.0, a[..., 3]
     mx, mn = rgb.max(axis=2), rgb.min(axis=2)
     lum = rgb[..., 0] * 0.3 + rgb[..., 1] * 0.59 + rgb[..., 2] * 0.11
     sat = (mx - mn) / np.maximum(mx, 1e-4)
-    glow = (lum > 0.72) | ((sat > 0.55) & (lum > 0.5))
+    glow = ((sat > 0.55) & (lum > 0.5)) if strict else ((lum > 0.72) | ((sat > 0.55) & (lum > 0.5)))  # strict: only saturated light (eyes, gems), not pale fur
     lo, mid, hi = np.array([8, 4, 16.0]), np.array([64, 18, 84.0]), np.array([170, 30, 70.0])
     t = np.clip(lum, 0, 1)[..., None]
     base = np.where(t < 0.5, lo + (mid - lo) * (t / 0.5), mid + (hi - mid) * ((t - 0.5) / 0.5))
