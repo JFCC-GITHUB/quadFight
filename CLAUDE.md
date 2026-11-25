@@ -47,8 +47,9 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   block colour theme, background, touch layout / swapped hands, move speed, ghost piece.
   `options.gd` is the 3-tab UI (COLORS / SOUND / CONTROLS), opened from the title and pause menu.
   `touch_layout.gd` defines the on-screen button layouts (shared by the game and the options preview).
-- VS CPU mode: `cpu_player.gd` (self-playing board + placement AI; `params(level)` = reaction time, move
-  speed, mistake rate), `vs_select.gd` (level picker), and the `vs` branches in `game.gd` (attack power 1-10
+- VS CPU mode: `cpu_player.gd` (self-playing board + placement AI that plays like a person: only presses keys, with
+  input lag, think time that grows with stack height, cw/ccw rotation, DAS/ARR for long shifts, noticed/unnoticed slips;
+  `params(level)` = think / key / das / arr / drop / slip / blind / mistake; level 20 = top human, ~2.6 pieces/s), `vs_select.gd` (level picker), and the `vs` branches in `game.gd` (attack power 1-10
   random garbage blocks, cancelling of own incoming, garbage = board value 7 / 8th theme colour, CPU mini board,
   result overlay). Gravity is capped (level 7) in VS. Win/loss record per level lives in `Settings`.
 - VS characters: `characters.gd` (12 fighters, HEROES + BEASTS pages: recipe of line-clear sizes that add up in any order, special-attack board

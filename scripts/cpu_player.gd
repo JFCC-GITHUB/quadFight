@@ -1,6 +1,8 @@
 extends RefCounted
-## Computer opponent for VS mode: a self-playing board with a simple placement AI.
-## Level 1-10 changes how fast it reacts / moves and how often it blunders.
+## Computer opponent for VS mode: a self-playing board with a simple placement AI that plays like a person:
+## it only presses keys (rotate cw/ccw, move, hard drop) with the same rules as the player, never teleports,
+## has input lag, a perception + thinking delay that grows with a messy stack, key presses with human jitter,
+## DAS/ARR for long shifts, slips that it may or may not notice, and more mistakes when the stack is high.
 
 const Pieces := preload("res://scripts/pieces.gd")
 const Characters := preload("res://scripts/characters.gd")
@@ -8,6 +10,7 @@ const Characters := preload("res://scripts/characters.gd")
 const COLS := 10
 const ROWS := 20
 const LOCK_DELAY := 0.5
+const INPUT_LAG := 0.05  # keyboard + screen latency before the first key of a piece (s)
 const GARBAGE := 7  # board value of a garbage block
 
 const MAX_LEVEL := 20
@@ -16,7 +19,7 @@ const NAMES := ["Rookie", "Beginner", "Casual", "Regular", "Skilled",
 	"Veteran", "Champion", "Prodigy", "Phantom", "Legend",
 	"Mythic", "Overlord", "Demigod", "Cosmic", "Perfect"]
 const MISTAKE := [0.40, 0.33, 0.27, 0.22, 0.18, 0.14, 0.11, 0.08, 0.05, 0.03,
-	0.02, 0.015, 0.01, 0.007, 0.005, 0.003, 0.002, 0.001, 0.0005, 0.0]
+	0.02, 0.015, 0.01, 0.007, 0.005, 0.004, 0.003, 0.002, 0.0015, 0.001]
 const LOOKAHEAD_FROM := 11  # from this level on, placements are chosen with the next piece in mind
 const MAX_GRAVITY_LEVEL := 7  # VS mode: gravity stops speeding up here
 
@@ -36,11 +39,16 @@ var alive := true
 var gravity_acc := 0.0
 var lock_timer := 0.0
 var think_timer := 0.0
-var act_timer := 0.0
 var has_plan := false
-var plan_rot := 0
+var plan_rot := 0   # where the piece should end up
 var plan_x := 0
-var failed_moves := 0
+var exec_rot := 0   # where the fingers aim (differs from the plan after a slip)
+var exec_x := 0
+var actions: Array = []   # timed key presses [time since scheduling, "rot" | "move" | "drop", arg]
+var plan_t := 0.0
+var fixes := 0
+var placed := 0     # pieces locked / key presses made (read by the speed test)
+var presses := 0
 
 var on_clear: Callable = func(_rows, _combo): pass   # (rows_cleared: int, combo: int)
 var on_hit: Callable = func(_n): pass                # garbage landed (count)
@@ -50,14 +58,21 @@ var want: Dictionary = {}  # clear size -> how many more of it the special needs
 var rng := RandomNumberGenerator.new()
 
 
-## Timing and mistake rate for a level (also used by the level-select screen).
+## Human timing for a level (also used by the level-select screen). Level 20 is a top human player:
+## about 2.5-3 pieces/s, ~0.12 s to decide (it plans during the previous piece), ~12 key presses/s.
 static func params(lv: int) -> Dictionary:
 	var t := clampf(float(lv - 1) / 9.0, 0.0, 1.0)
 	var u := clampf(float(lv - 10) / 10.0, 0.0, 1.0)  # levels 11-20 keep getting faster
+	var e := pow(t, 0.8)
 	return {
-		"think": lerpf(lerpf(1.6, 0.35, pow(t, 0.8)), 0.04, u),     # reaction time after a piece appears (s)
-		"act": lerpf(lerpf(0.7, 0.16, pow(t, 0.8)), 0.025, u),      # time per rotate / shift (s)
-		"mistake": MISTAKE[clampi(lv - 1, 0, MAX_LEVEL - 1)],       # chance to pick a bad placement
+		"think": lerpf(lerpf(1.5, 0.45, e), 0.12, u),    # see the piece + decide, after it appears (s)
+		"key": lerpf(lerpf(0.55, 0.17, e), 0.085, u),    # time between two key taps (s)
+		"das": lerpf(lerpf(0.30, 0.15, t), 0.11, u),     # hold a direction: delay before it auto-repeats (s)
+		"arr": lerpf(lerpf(0.10, 0.05, t), 0.03, u),     # auto-repeat interval (s)
+		"drop": lerpf(lerpf(0.25, 0.12, e), 0.05, u),    # pause to check the result before hard drop (s)
+		"slip": lerpf(0.08, 0.004, e),                   # chance a finger hits the wrong key or count
+		"blind": lerpf(0.4, 0.05, e),                    # chance a slip goes unnoticed
+		"mistake": MISTAKE[clampi(lv - 1, 0, MAX_LEVEL - 1)],   # chance to pick a bad placement
 	}
 
 
@@ -113,26 +128,78 @@ func _think(delta: float) -> void:
 	if not has_plan:
 		think_timer -= delta
 		if think_timer <= 0.0:
-			_make_plan(p["mistake"])
-			act_timer = p["act"] * 0.5
+			_make_plan(p["mistake"] * (1.0 + 1.5 * _panic()))
+			_schedule(p)
 		return
-	act_timer -= delta
-	var guard := 0
-	while act_timer <= 0.0 and has_plan and alive and guard < 4:
-		guard += 1
-		act_timer += p["act"]
-		_do_action()
+	plan_t += delta
+	while not actions.is_empty() and actions[0][0] <= plan_t and alive and has_plan:
+		var a: Array = actions.pop_front()
+		match a[1]:
+			"rot":
+				presses += 1
+				_rotate(a[2])
+			"move":
+				presses += 1
+				_move(a[2])
+			"drop":
+				_finish(p)
 
 
-func _do_action() -> void:
-	if rot != plan_rot and failed_moves < 3:
-		if not _rotate():
-			failed_moves += 1
-	elif pos.x != plan_x and failed_moves < 3:
-		if not _move(signi(plan_x - pos.x)):
-			failed_moves += 1
-	else:
-		_hard_drop()
+## 0..1: how messy / high the stack is. People think longer and slip more when it is.
+func _panic() -> float:
+	return clampf((_max_height(board) - 10) / 8.0, 0.0, 1.0)
+
+
+## Plans the key presses for the target: rotations (the shorter of cw / ccw), the shift (taps, or hold with
+## DAS/ARR when that is faster), done in parallel like two fingers, then a short check and the hard drop.
+func _schedule(p: Dictionary, extra := 0.0, slip := true) -> void:
+	actions.clear()
+	plan_t = 0.0
+	exec_rot = plan_rot
+	exec_x = plan_x
+	if slip and rng.randf() < p["slip"] * (1.0 + _panic()):
+		if rng.randf() < 0.5:
+			exec_x = clampi(plan_x + (1 if rng.randf() < 0.5 else -1), -2, COLS)
+		else:
+			exec_rot = (plan_rot + (1 if rng.randf() < 0.5 else 3)) % 4
+	var t0 := INPUT_LAG + extra + rng.randf_range(0.0, 0.04)
+	var n_rot := (exec_rot - rot + 4) % 4
+	var rot_dir := -1 if n_rot == 3 else 1
+	var rot_end := t0
+	var tt := t0
+	for i in (1 if n_rot == 3 else n_rot):
+		actions.append([tt, "rot", rot_dir])
+		rot_end = tt
+		tt += float(p["key"]) * rng.randf_range(0.8, 1.25)
+	var dx := exec_x - pos.x
+	var dist := absi(dx)
+	var move_end := t0
+	if dist > 0:
+		var m0: float = t0 + (p["key"] * 0.3 if n_rot > 0 else 0.0)  # the rotation key goes first
+		var tap_end: float = m0 + p["key"] * 1.1 * (dist - 1)
+		var hold_end: float = m0 + p["das"] + p["arr"] * (dist - 2)
+		var times: Array = [m0]
+		if dist > 2 and hold_end < tap_end:
+			for i in range(1, dist):
+				times.append(m0 + p["das"] + p["arr"] * (i - 1))
+		else:
+			for i in range(1, dist):
+				times.append(times[i - 1] + p["key"] * rng.randf_range(0.8, 1.25))
+		for x in times:
+			actions.append([x, "move", signi(dx)])
+		move_end = times[-1]
+	actions.append([maxf(rot_end, move_end) + p["drop"] * rng.randf_range(0.7, 1.3), "drop", 0])
+	actions.sort_custom(func(a, b): return a[0] < b[0])
+	has_plan = true
+
+
+## Before the hard drop: a person looks at the piece. Wrong place and noticed -> a short pause, then fix it.
+func _finish(p: Dictionary) -> void:
+	if (rot != plan_rot or pos.x != plan_x) and fixes < 2 and rng.randf() >= p["blind"]:
+		fixes += 1
+		_schedule(p, rng.randf_range(0.12, 0.25), false)
+		return
+	_hard_drop()
 
 
 func _collides(k: int, r: int, p: Vector2i, bd: Array = []) -> bool:
@@ -155,8 +222,8 @@ func _move(dx: int) -> bool:
 	return true
 
 
-func _rotate() -> bool:
-	var new_rot := (rot + 1) % 4
+func _rotate(dir := 1) -> bool:
+	var new_rot := (rot + dir + 4) % 4
 	for k in Pieces.kicks(kind, rot, new_rot):
 		if not _collides(kind, new_rot, pos + k):
 			pos += k
@@ -194,13 +261,16 @@ func _spawn() -> void:
 	gravity_acc = 0.0
 	lock_timer = 0.0
 	has_plan = false
-	failed_moves = 0
-	think_timer = params(level)["think"]
+	actions.clear()
+	fixes = 0
+	# deciding takes longer on a messy stack; everyone varies from piece to piece
+	think_timer = params(level)["think"] * rng.randf_range(0.8, 1.3) * (1.0 + 0.5 * _panic())
 	if _collides(kind, rot, pos):
 		alive = false
 
 
 func _lock() -> void:
+	placed += 1
 	for c in Pieces.cells(kind, rot):
 		var p: Vector2i = pos + c
 		if p.y >= 0:
@@ -307,7 +377,6 @@ func _make_plan(mistake: float) -> void:
 		for i in range(top, cands.size()):
 			cands[i][0] += lowest - 1.0  # not looked at: keep them below the examined ones
 	if cands.is_empty():
-		has_plan = true
 		plan_rot = rot
 		plan_x = pos.x
 		return
@@ -325,7 +394,6 @@ func _make_plan(mistake: float) -> void:
 		pick = 1  # sometimes just the second-best, like a human
 	plan_rot = cands[pick][1]
 	plan_x = cands[pick][2]
-	has_plan = true
 
 
 ## Heuristic: low stack, few holes, flat surface, clear lines. Returns [score, board after the move].
