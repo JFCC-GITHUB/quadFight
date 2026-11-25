@@ -1,10 +1,12 @@
-"""A tiny pixel-art kit: 48x48 sprites built from curved parts (flat 4-tone cel shading, 1px ink outline per part)
-plus hand-typed ASCII stamps for faces and details. Output is enlarged 10x with nearest neighbour (480 px)."""
+"""A tiny pixel-art kit: 96x96 sprites built from curved parts (flat 4-tone cel shading, 1px ink outline per part)
+plus hand-typed ASCII stamps for faces and details. Coordinates are in 48-unit space (1 unit = S pixels) so shapes stay
+easy to place; `native=True` / the *1 helpers work in real pixels for fine detail. Output is enlarged 5x (480 px)."""
 import numpy as np
 from PIL import Image, ImageDraw
 
-N, UP = 48, 10
+N, S, UP = 96, 2, 5
 YY, XX = np.mgrid[0:N, 0:N]
+UX, UY = (XX + 0.5) / S, (YY + 0.5) / S   # pixel centres in unit space
 
 
 def rgb(h):
@@ -15,17 +17,17 @@ def rgb(h):
 
 
 def E(cx, cy, rx, ry):
-    return ((XX - cx) / rx) ** 2 + ((YY - cy) / ry) ** 2 <= 1.0
+    return ((UX - cx) / rx) ** 2 + ((UY - cy) / ry) ** 2 <= 1.0
 
 
 def P(*pts):
     m = Image.new("L", (N, N), 0)
-    ImageDraw.Draw(m).polygon(list(pts), fill=255)
+    ImageDraw.Draw(m).polygon([(x * S, y * S) for x, y in pts], fill=255)
     return np.array(m) > 0
 
 
 def R(x0, y0, x1, y1):
-    return (XX >= x0) & (XX <= x1) & (YY >= y0) & (YY <= y1)
+    return (UX >= x0) & (UX <= x1 + 1) & (UY >= y0) & (UY <= y1 + 1)
 
 
 def flip(mask):
@@ -61,26 +63,48 @@ class Sprite:
             up[1:] = mask[1:] & ~mask[:-1]
             self.px[up & (XX < cx + rx * 0.5)] = (*col[0], 255)
 
-    def stamp(self, x, y, rows, pal):
+    def stamp(self, x, y, rows, pal, native=False):
+        k = 1 if native else S
         for j, row in enumerate(rows):
             for i, ch in enumerate(row):
-                if ch != "." and ch in pal and 0 <= x + i < N and 0 <= y + j < N:
-                    self.px[y + j, x + i] = (*rgb(pal[ch]), 255)
+                if ch == "." or ch not in pal:
+                    continue
+                px, py = int((x + i) * k), int((y + j) * k)
+                for dy in range(k):
+                    for dx in range(k):
+                        if 0 <= px + dx < N and 0 <= py + dy < N:
+                            self.px[py + dy, px + dx] = (*rgb(pal[ch]), 255)
 
-    def mstamp(self, x, y, rows, pal):
+    def mstamp(self, x, y, rows, pal, native=False):
         """Stamp at x and mirrored about the vertical centre of the sprite."""
-        self.stamp(x, y, rows, pal)
+        self.stamp(x, y, rows, pal, native)
         w = max(len(r) for r in rows)
-        self.stamp(N - x - w, y, [r[::-1] for r in rows], pal)
+        self.stamp((N if native else N / S) - x - w, y, [r[::-1] for r in rows], pal, native)
 
-    def line(self, p0, p1, color):
+    def line(self, p0, p1, color, native=False):
+        k = 1 if native else S
         n = int(max(abs(p1[0] - p0[0]), abs(p1[1] - p0[1]))) + 1
-        self.dots([(round(p0[0] + (p1[0] - p0[0]) * i / max(n - 1, 1)), round(p0[1] + (p1[1] - p0[1]) * i / max(n - 1, 1))) for i in range(n)], color)
+        self.dots([(round(p0[0] + (p1[0] - p0[0]) * i / max(n - 1, 1)), round(p0[1] + (p1[1] - p0[1]) * i / max(n - 1, 1))) for i in range(n)], color, native)
 
-    def dots(self, pts, color):
+    def dots(self, pts, color, native=False):
+        k = 1 if native else S
         for x, y in pts:
-            if 0 <= x < N and 0 <= y < N:
-                self.px[y, x] = (*rgb(color), 255)
+            for dy in range(k):
+                for dx in range(k):
+                    px, py = int(x * k) + dx, int(y * k) + dy
+                    if 0 <= px < N and 0 <= py < N:
+                        self.px[py, px] = (*rgb(color), 255)
+
+    def fur(self, mask, color, n=70, seed=1, length=3):
+        """Short fur strokes sprinkled inside `mask`, slanting down and to the right."""
+        rng = np.random.default_rng(seed)
+        ys, xs = np.nonzero(mask)
+        for i in rng.integers(0, len(xs), n):
+            x, y = int(xs[i]), int(ys[i])
+            for j in range(length):
+                px, py = x + j // 2, y + j
+                if 0 <= px < N and 0 <= py < N and mask[py, px]:
+                    self.px[py, px] = (*rgb(color), 255)
 
     def glow(self, color, strength=0.5):
         """A dithered halo around the figure (checker pattern), like the other busts."""
