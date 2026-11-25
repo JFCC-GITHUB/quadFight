@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cf1tvmhrxp3hf"
-path="res://.godot/imported/frost_s.png-f919ad10e6c5ad1c846f0d3ae4ea2d70.ctex"
+uid="uid://cd6pyiu1vif7r"
+path="res://.godot/imported/oldshell_cast.png-f67fe454bf0601c28dd215889027b656.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/frost_s.png"
-dest_files=["res://.godot/imported/frost_s.png-f919ad10e6c5ad1c846f0d3ae4ea2d70.ctex"]
+source_file="res://assets/fx/oldshell_cast.png"
+dest_files=["res://.godot/imported/oldshell_cast.png-f67fe454bf0601c28dd215889027b656.ctex"]
 
 [params]
 

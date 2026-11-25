@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2ntkl02lts6p"
-path="res://.godot/imported/bastion_s.png-6ebae280d522a5b93c085915f69ad760.ctex"
+uid="uid://btqir60oaxx1c"
+path="res://.godot/imported/nightowl_hit.png-b4652258afc4491e9cfc5ec64a25eb1e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/bastion_s.png"
-dest_files=["res://.godot/imported/bastion_s.png-6ebae280d522a5b93c085915f69ad760.ctex"]
+source_file="res://assets/fx/nightowl_hit.png"
+dest_files=["res://.godot/imported/nightowl_hit.png-b4652258afc4491e9cfc5ec64a25eb1e.ctex"]
 
 [params]
 

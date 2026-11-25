@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://m8fwlo683tov"
-path="res://.godot/imported/maskcat_s.png-a2cd1ee72a5200c5c3131ea22959ff24.ctex"
+uid="uid://4bgqsnn88fus"
+path="res://.godot/imported/ironpaw_hit.png-20bf73a86f3b5b9cceb6831a7ce1bc60.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/maskcat_s.png"
-dest_files=["res://.godot/imported/maskcat_s.png-a2cd1ee72a5200c5c3131ea22959ff24.ctex"]
+source_file="res://assets/fx/ironpaw_hit.png"
+dest_files=["res://.godot/imported/ironpaw_hit.png-20bf73a86f3b5b9cceb6831a7ce1bc60.ctex"]
 
 [params]
 

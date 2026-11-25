@@ -51,13 +51,13 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   speed, mistake rate), `vs_select.gd` (level picker), and the `vs` branches in `game.gd` (attack power 1-10
   random garbage blocks, cancelling of own incoming, garbage = board value 7 / 8th theme colour, CPU mini board,
   result overlay). Gravity is capped (level 7) in VS. Win/loss record per level lives in `Settings`.
-- VS characters: `characters.gd` (6 fighters: recipe of line-clear sizes that add up in any order, special-attack board
+- VS characters: `characters.gd` (12 fighters, HEROES + BEASTS pages: recipe of line-clear sizes that add up in any order, special-attack board
   operations shared by player and CPU), `char_select.gd` (after the level picker), `portrait.gd` / `fx_layer.gd`
-  (nearest-filtered pixel art + 8-frame strip animations). Art comes from `tools/gen_fighters.py` (hand-built 96px pixel busts: curved
-  cel-shaded parts + typed face stamps via `tools/pixelkit.py`; 5x nearest) and `tools/gen_fx.py` (`assets/fx/<char>_<cast|hit>.png`); re-run them and `godot --headless --import`.
-- VS modes: LADDER (one opponent, `Main.run` level +1 per win) and TOURNAMENT (the 5 other fighters, shuffled, one level
+  (nearest-filtered pixel art + 8-frame strip animations). Art comes from `tools/gen_fighters.py` (64px pixel busts in 3/4 view facing right, built with
+  `tools/pix3.py`: contour-following shading, hue-shifted ramps, selective outlines, jagged fur bands, typed face stamps; 8x nearest) and `tools/gen_fx.py` (`assets/fx/<char>_<cast|hit>.png`); re-run them and `godot --headless --import`.
+- VS modes: LADDER (one opponent, `Main.run` level +1 per win) and TOURNAMENT (5 random other fighters, `Main.TOUR_FIGHTS`, one level
   harder each, lose once = out). `Main.start_run` / `next_fight` / `show_match` drive both; `vs_select.gd` (level stepper,
-  CPU special setting: NEVER / NORMAL / AIM), `char_select.gd` (step 0 you, step 1 opponent or RANDOM), `intro.gd` (versus
+  CPU special setting: NEVER / NORMAL / AIM), `char_select.gd` (two pages of 6; step 0 you, step 1 opponent or RANDOM), `intro.gd` (versus
   intro between fights + champion screen). The tournament ends with a boss: a "dark" copy of your own fighter (id
   `dark_<fighter>`, art `assets/chars/<fighter>_dark.png` from `dark_variant()` in gen_fighters.py, `Characters.base/def/
   portrait` resolve it; it plays your theme slower/lower and aims for its special). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece

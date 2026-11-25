@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dwjvqy66e6rsa"
-path="res://.godot/imported/volt_s.png-1813f22deb5e101d7186ad0e786afc31.ctex"
+uid="uid://847rkt5cjp4l"
+path="res://.godot/imported/maskcat_hit.png-1df3808dd6cd8437e0f1828c66d13f97.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/volt_s.png"
-dest_files=["res://.godot/imported/volt_s.png-1813f22deb5e101d7186ad0e786afc31.ctex"]
+source_file="res://assets/fx/maskcat_hit.png"
+dest_files=["res://.godot/imported/maskcat_hit.png-1df3808dd6cd8437e0f1828c66d13f97.ctex"]
 
 [params]
 

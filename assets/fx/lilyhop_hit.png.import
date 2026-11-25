@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://hj6kmlwbjt4r"
-path="res://.godot/imported/lilyhop_s.png-a0771069358b0d7545312a7c8e16fe43.ctex"
+uid="uid://o4345u0usoya"
+path="res://.godot/imported/lilyhop_hit.png-ab54f401957742bcacc9f241c8ef831a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/lilyhop_s.png"
-dest_files=["res://.godot/imported/lilyhop_s.png-a0771069358b0d7545312a7c8e16fe43.ctex"]
+source_file="res://assets/fx/lilyhop_hit.png"
+dest_files=["res://.godot/imported/lilyhop_hit.png-ab54f401957742bcacc9f241c8ef831a.ctex"]
 
 [params]
 

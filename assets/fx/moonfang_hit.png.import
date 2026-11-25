@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://y86fs5ft7cb4"
-path="res://.godot/imported/nightowl_s.png-e6a5c14b9c0722ae0abce539b8cc409c.ctex"
+uid="uid://b7pfhbxjkvuks"
+path="res://.godot/imported/moonfang_hit.png-1317ba9dd331e401726e0ba594d52714.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/nightowl_s.png"
-dest_files=["res://.godot/imported/nightowl_s.png-e6a5c14b9c0722ae0abce539b8cc409c.ctex"]
+source_file="res://assets/fx/moonfang_hit.png"
+dest_files=["res://.godot/imported/moonfang_hit.png-1317ba9dd331e401726e0ba594d52714.ctex"]
 
 [params]
 

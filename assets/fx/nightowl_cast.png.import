@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bjjjm4g26hx4s"
-path="res://.godot/imported/oldshell_s.png-56b52143d43e6cf0708e9787413190fa.ctex"
+uid="uid://dex1ulqlxpo5y"
+path="res://.godot/imported/nightowl_cast.png-ae49c25dcb99c46c796d262c8d27a529.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/oldshell_s.png"
-dest_files=["res://.godot/imported/oldshell_s.png-56b52143d43e6cf0708e9787413190fa.ctex"]
+source_file="res://assets/fx/nightowl_cast.png"
+dest_files=["res://.godot/imported/nightowl_cast.png-ae49c25dcb99c46c796d262c8d27a529.ctex"]
 
 [params]
 

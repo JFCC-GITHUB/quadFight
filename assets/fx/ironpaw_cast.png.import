@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://l0w0k4ubsylh"
-path="res://.godot/imported/ironpaw_s.png-e1efc8c4432d66a618d97421c7011266.ctex"
+uid="uid://3kr235rr0edk"
+path="res://.godot/imported/ironpaw_cast.png-25c7b910b5cfe65605eafd201d44c749.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/ironpaw_s.png"
-dest_files=["res://.godot/imported/ironpaw_s.png-e1efc8c4432d66a618d97421c7011266.ctex"]
+source_file="res://assets/fx/ironpaw_cast.png"
+dest_files=["res://.godot/imported/ironpaw_cast.png-25c7b910b5cfe65605eafd201d44c749.ctex"]
 
 [params]
 

@@ -19,27 +19,51 @@ const LIST := [
 		"desc": "2 hole-punched checkerboard rows rise from below."},
 	{"id": "titan", "name": "TITAN", "color": "a8e83a", "need": {4: 1}, "skill": "BOULDER",
 		"desc": "A huge 5x5 boulder slams down in the middle."},
+	{"id": "ironpaw", "name": "IRONPAW", "color": "e0904a", "need": {2: 1, 3: 1}, "skill": "IRON CLAWS",
+		"desc": "Three 3-high claw pillars slam into random columns."},
+	{"id": "moonfang", "name": "MOONFANG", "color": "8aa8ff", "need": {1: 1, 2: 1}, "skill": "MOON HOWL",
+		"desc": "4 short 2-block bars fall on random columns."},
+	{"id": "nightowl", "name": "NIGHTOWL", "color": "ffb02a", "need": {2: 3}, "skill": "FEATHER FALL",
+		"desc": "8 feathers land on the highest columns."},
+	{"id": "oldshell", "name": "OLDSHELL", "color": "d8b070", "need": {1: 4}, "skill": "SHELL DROP",
+		"desc": "A big dome shell (4 over 6) drops on the stack."},
+	{"id": "lilyhop", "name": "LILYHOP", "color": "62d04c", "need": {1: 2, 2: 1}, "skill": "LILY PADS",
+		"desc": "Three flat 3-wide lily pads drop on random columns."},
+	{"id": "maskcat", "name": "MASKCAT", "color": "e070ff", "need": {3: 2}, "skill": "SNEAK ATTACK",
+		"desc": "2 rows with the same single gap rise from below."},
 ]
 
 const PORTRAITS := {
 	"bastion": preload("res://assets/chars/bastion.png"), "blaze": preload("res://assets/chars/blaze.png"),
 	"frost": preload("res://assets/chars/frost.png"), "volt": preload("res://assets/chars/volt.png"),
 	"shade": preload("res://assets/chars/shade.png"), "titan": preload("res://assets/chars/titan.png"),
+	"ironpaw": preload("res://assets/chars/ironpaw.png"), "moonfang": preload("res://assets/chars/moonfang.png"),
+	"nightowl": preload("res://assets/chars/nightowl.png"), "oldshell": preload("res://assets/chars/oldshell.png"),
+	"lilyhop": preload("res://assets/chars/lilyhop.png"), "maskcat": preload("res://assets/chars/maskcat.png"),
 }
 const FX_CAST := {
 	"bastion": preload("res://assets/fx/bastion_cast.png"), "blaze": preload("res://assets/fx/blaze_cast.png"),
 	"frost": preload("res://assets/fx/frost_cast.png"), "volt": preload("res://assets/fx/volt_cast.png"),
 	"shade": preload("res://assets/fx/shade_cast.png"), "titan": preload("res://assets/fx/titan_cast.png"),
+	"ironpaw": preload("res://assets/fx/ironpaw_cast.png"), "moonfang": preload("res://assets/fx/moonfang_cast.png"),
+	"nightowl": preload("res://assets/fx/nightowl_cast.png"), "oldshell": preload("res://assets/fx/oldshell_cast.png"),
+	"lilyhop": preload("res://assets/fx/lilyhop_cast.png"), "maskcat": preload("res://assets/fx/maskcat_cast.png"),
 }
 const FX_HIT := {
 	"bastion": preload("res://assets/fx/bastion_hit.png"), "blaze": preload("res://assets/fx/blaze_hit.png"),
 	"frost": preload("res://assets/fx/frost_hit.png"), "volt": preload("res://assets/fx/volt_hit.png"),
 	"shade": preload("res://assets/fx/shade_hit.png"), "titan": preload("res://assets/fx/titan_hit.png"),
+	"ironpaw": preload("res://assets/fx/ironpaw_hit.png"), "moonfang": preload("res://assets/fx/moonfang_hit.png"),
+	"nightowl": preload("res://assets/fx/nightowl_hit.png"), "oldshell": preload("res://assets/fx/oldshell_hit.png"),
+	"lilyhop": preload("res://assets/fx/lilyhop_hit.png"), "maskcat": preload("res://assets/fx/maskcat_hit.png"),
 }
 const DARK_PORTRAITS := {
 	"bastion": preload("res://assets/chars/bastion_dark.png"), "blaze": preload("res://assets/chars/blaze_dark.png"),
 	"frost": preload("res://assets/chars/frost_dark.png"), "volt": preload("res://assets/chars/volt_dark.png"),
 	"shade": preload("res://assets/chars/shade_dark.png"), "titan": preload("res://assets/chars/titan_dark.png"),
+	"ironpaw": preload("res://assets/chars/ironpaw_dark.png"), "moonfang": preload("res://assets/chars/moonfang_dark.png"),
+	"nightowl": preload("res://assets/chars/nightowl_dark.png"), "oldshell": preload("res://assets/chars/oldshell_dark.png"),
+	"lilyhop": preload("res://assets/chars/lilyhop_dark.png"), "maskcat": preload("res://assets/chars/maskcat_dark.png"),
 }
 const VOLT_HIT_RIGHT := preload("res://assets/fx/volt_hit_r.png")
 const FX_FRAMES := 8
@@ -155,6 +179,41 @@ static func apply(id: String, board: Array) -> bool:
 				for xx in 5:
 					cells.append(Vector2i(xx, yy))
 			return _drop(board, cells, randi_range(2, 3))
+		"ironpaw":
+			var cols: Array = range(COLS)
+			cols.shuffle()
+			for x in cols.slice(0, 3):
+				if not _drop(board, [Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2)], x):
+					return false
+			return true
+		"moonfang":
+			for i in 4:
+				if not _drop(board, [Vector2i(0, 0), Vector2i(1, 0)], randi_range(0, COLS - 2)):
+					return false
+			return true
+		"nightowl":
+			var cols: Array = range(COLS)
+			cols.shuffle()  # random tie-break between equally high columns
+			cols.sort_custom(func(a, b): return _top(board, a) < _top(board, b))
+			for x in cols.slice(0, 8):
+				if not _drop(board, [Vector2i(0, 0)], x):
+					return false
+			return true
+		"oldshell":
+			var dome := [Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0),
+				Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1), Vector2i(5, 1)]
+			return _drop(board, dome, randi_range(0, COLS - 6))
+		"lilyhop":
+			for i in 3:
+				if not _drop(board, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)], randi_range(0, COLS - 3)):
+					return false
+			return true
+		"maskcat":
+			var gap := randi_range(0, COLS - 1)
+			var row: Array = []
+			for x in COLS:
+				row.append(-1 if x == gap else GARBAGE)
+			return _push(board, [row, row])
 	return true
 
 

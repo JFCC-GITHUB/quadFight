@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bjglac0t81jug"
-path="res://.godot/imported/moonfang_s.png-5a2fbd1ca30e0bff34b305a05226612d.ctex"
+uid="uid://b2nwft4102nus"
+path="res://.godot/imported/oldshell_hit.png-386994a11c1f74735d52026839040769.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/moonfang_s.png"
-dest_files=["res://.godot/imported/moonfang_s.png-5a2fbd1ca30e0bff34b305a05226612d.ctex"]
+source_file="res://assets/fx/oldshell_hit.png"
+dest_files=["res://.godot/imported/oldshell_hit.png-386994a11c1f74735d52026839040769.ctex"]
 
 [params]
 

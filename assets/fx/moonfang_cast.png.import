@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://brpnxahf8skpu"
-path="res://.godot/imported/titan_s.png-8c97f539139b912f99eb87db1564876c.ctex"
+uid="uid://ccgjffaiucvfb"
+path="res://.godot/imported/moonfang_cast.png-4b8444d376763c4d3fcb62810e408df5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/titan_s.png"
-dest_files=["res://.godot/imported/titan_s.png-8c97f539139b912f99eb87db1564876c.ctex"]
+source_file="res://assets/fx/moonfang_cast.png"
+dest_files=["res://.godot/imported/moonfang_cast.png-4b8444d376763c4d3fcb62810e408df5.ctex"]
 
 [params]
 

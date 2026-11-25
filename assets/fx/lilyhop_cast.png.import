@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://22abtuicru6x"
-path="res://.godot/imported/blaze_s.png-3b07c83f86ff2cb3662e986ceadd102c.ctex"
+uid="uid://c2uismyxunck4"
+path="res://.godot/imported/lilyhop_cast.png-882f37f44097153113431f54ea3d8b01.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/chars/blaze_s.png"
-dest_files=["res://.godot/imported/blaze_s.png-3b07c83f86ff2cb3662e986ceadd102c.ctex"]
+source_file="res://assets/fx/lilyhop_cast.png"
+dest_files=["res://.godot/imported/lilyhop_cast.png-882f37f44097153113431f54ea3d8b01.ctex"]
 
 [params]
 
