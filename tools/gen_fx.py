@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pixel-art special-attack animations for the six VS characters -> assets/fx/<char>_<cast|hit>.png
+"""Pixel-art special-attack animations for the VS characters -> assets/fx/<char>_<cast|hit>.png
 
 Each file is a horizontal strip of FR frames, every frame N x N pixel-grid cells enlarged UP x (nearest).
   cast: charge-up at the caster (particles converge, glyph flash, ring)
@@ -26,6 +26,12 @@ RAMPS = {
     "volt": ["#ffffff", "#fff08a", "#ffc21a", "#8a52d8"],
     "shade": ["#ffffff", "#ff8ae8", "#c040ff", "#4a1a8a"],
     "titan": ["#f4ffc0", "#a8e83a", "#7a6a48", "#3a3024"],
+    "ironpaw": ["#fff6dc", "#f8c070", "#c8864a", "#6a3424"],
+    "moonfang": ["#ffffff", "#d0dcff", "#7a9aff", "#2a3a9a"],
+    "nightowl": ["#fffbe8", "#ffd480", "#ffa82a", "#6a3a2a"],
+    "oldshell": ["#fff4c0", "#e0b870", "#8a6430", "#3a2418"],
+    "lilyhop": ["#e8ffc0", "#9ae860", "#3aa040", "#14502a"],
+    "maskcat": ["#ffffff", "#f0b0ff", "#b050e8", "#4a1a7a"],
 }
 
 
@@ -81,6 +87,12 @@ GLYPHS = {  # polygons around (0,0), radius ~ 1
     "volt": [(.3, -1), (-.6, .1), (0, .1), (-.3, 1), (.7, -.2), (.1, -.2)],  # bolt
     "shade": [(0, -1), (.9, 0), (0, 1), (-.9, 0)],                           # diamond
     "titan": [(-.7, -.7), (.7, -.7), (.7, .7), (-.7, .7)],                   # block
+    "ironpaw": [(-.9, -.4), (-.5, -1), (-.2, -.3), (.2, -1), (.5, -.3), (.9, -1), (.7, .8), (-.7, .8)],  # claw
+    "moonfang": [(.2, -1), (-.6, -.5), (-.7, .4), (.1, 1), (-.2, .3), (-.2, -.4)],  # crescent
+    "nightowl": [(0, -1), (.5, -.2), (.2, 1), (-.2, 1), (-.5, -.2)],         # feather
+    "oldshell": [(-1, .6), (-.7, -.4), (0, -.9), (.7, -.4), (1, .6)],        # dome
+    "lilyhop": [(-1, 0), (-.6, -.6), (0, -.7), (.6, -.6), (1, 0), (.6, .6), (0, .7), (0, 0), (-.6, .6)],  # pad
+    "maskcat": [(-1, -.4), (1, -.4), (.9, .4), (.3, .4), (0, 0), (-.3, .4), (-.9, .4)],  # mask
 }
 
 
@@ -318,7 +330,108 @@ def hit_titan(i):
     return im
 
 
-HITS = {"bastion": hit_bastion, "blaze": hit_blaze, "frost": hit_frost, "volt": hit_volt, "shade": hit_shade, "titan": hit_titan}
+def falling(d, c, shapes, t, cell=6):
+    """Shapes (lists of (col, row) cells, a start column and a delay) drop in and land on the ground."""
+    for cells, x0, dl in shapes:
+        p = clamp((t - dl) / 0.4)
+        if p <= 0:
+            continue
+        h = max(r for _, r in cells) + 1
+        y0 = -h * cell + (GROUND - h * cell + h * cell) * p * p
+        for q, r in cells:
+            x, y = x0 + q * cell, int(y0) + r * cell
+            d.rectangle((x, y, x + cell - 1, y + cell - 1), fill=c[2])
+            d.line((x, y, x + cell - 2, y), fill=c[1]); d.line((x, y + cell - 1, x + cell - 1, y + cell - 1), fill=c[3])
+        if p >= 1 and t - dl < 0.55:
+            ring(d, x0 + cell, GROUND, 4 + (t - dl - 0.4) * 60, 1, c[0])
+
+
+def hit_ironpaw(i):
+    t = i / (FR - 1)
+    c = ramp("ironpaw")
+    im, d = canvas()
+    for k in range(3):                                   # three claw slashes, then three pillars
+        p = clamp((t - k * 0.06) / 0.3)
+        if 0 < p and t < 0.6:
+            x0, y0 = 14 + k * 14, 6
+            ex, ey = x0 + 12 * p, y0 + 44 * p
+            thick(d, [(x0, y0), (ex, ey)], 3, c[2]); thick(d, [(x0, y0), (ex, ey)], 1, c[0])
+    falling(d, c, [([(0, 0), (0, 1), (0, 2)], 12, 0.3), ([(0, 0), (0, 1), (0, 2)], 29, 0.38), ([(0, 0), (0, 1), (0, 2)], 46, 0.46)], t)
+    return outline(im)
+
+
+def hit_moonfang(i):
+    t = i / (FR - 1)
+    c = ramp("moonfang")
+    im, d = canvas()
+    if t < 0.5:                                          # a crescent moon flashes, then four bars fall
+        disc(d, 32, 18, 11, c[1]); disc(d, 37, 15, 10, (0, 0, 0, 0))
+    bar = [(0, 0), (1, 0)]
+    falling(d, c, [(bar, 4, 0.2), (bar, 20, 0.3), (bar, 34, 0.25), (bar, 48, 0.35)], t)
+    return outline(im)
+
+
+def hit_nightowl(i):
+    t = i / (FR - 1)
+    c = ramp("nightowl")
+    im, d = canvas()
+    for k in range(8):                                   # eight feathers drift down
+        p = clamp((t - (k % 4) * 0.08) / 0.75)
+        x = 6 + k * 7 + math.sin(p * 9 + k) * 3
+        y = -6 + (GROUND - 2) * p
+        d.polygon([(x, y - 4), (x + 2, y), (x, y + 4), (x - 2, y)], fill=c[1] if k % 2 else c[2])
+        d.line((x, y - 4, x, y + 4), fill=c[3])
+    return outline(im)
+
+
+def hit_oldshell(i):
+    t = i / (FR - 1)
+    c = ramp("oldshell")
+    im, d = canvas()
+    falling(d, c, [([(1, 0), (2, 0), (3, 0), (4, 0), (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1)], 14, 0.0)], t)
+    if t > 0.45:                                          # shell pattern + dust
+        k = (t - 0.45) / 0.55
+        d.ellipse((32 - 10 - k * 22, GROUND - 2, 32 + 10 + k * 22, GROUND + 3), outline=c[0])
+    return outline(im)
+
+
+def hit_lilyhop(i):
+    t = i / (FR - 1)
+    c = ramp("lilyhop")
+    im, d = canvas()
+    pad = [(0, 0), (1, 0), (2, 0)]
+    falling(d, c, [(pad, 4, 0.0), (pad, 24, 0.15), (pad, 42, 0.3)], t)
+    for x0, dl in ((13, 0.4), (33, 0.55), (51, 0.7)):     # splash drops
+        k = clamp((t - dl) / 0.3)
+        if 0 < k < 1:
+            for a in (-1, 1):
+                disc(d, x0 + a * 8 * k, GROUND - 10 * math.sin(k * math.pi), 1.5, c[0])
+    return outline(im)
+
+
+def hit_maskcat(i):
+    t = i / (FR - 1)
+    c = ramp("maskcat")
+    im, d = canvas()
+    for k in range(3):                                   # a quick paw swipe
+        p = clamp(t / 0.3)
+        if 0 < p < 1:
+            thick(d, [(52, 8 + k * 6), (52 - 40 * p, 20 + k * 6)], 2, c[1])
+    rise = clamp((t - 0.3) / 0.4)
+    gap = 5
+    for r in range(2):                                   # two rows rise from below with the same gap
+        y = GROUND + 2 - (r + 1) * 6 * rise
+        for q in range(10):
+            if q != gap and rise > 0:
+                d.rectangle((2 + q * 6, y, 7 + q * 6, y + 5), fill=c[2] if (q + r) % 2 else c[3])
+    if t > 0.6 and i % 2:
+        star(d, 2 + gap * 6 + 3, GROUND - 16, 3, c[0])
+    return outline(im)
+
+
+HITS = {"bastion": hit_bastion, "blaze": hit_blaze, "frost": hit_frost, "volt": hit_volt, "shade": hit_shade, "titan": hit_titan,
+        "ironpaw": hit_ironpaw, "moonfang": hit_moonfang, "nightowl": hit_nightowl, "oldshell": hit_oldshell,
+        "lilyhop": hit_lilyhop, "maskcat": hit_maskcat}
 
 
 def strip(frames):
@@ -330,7 +443,7 @@ def strip(frames):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    prev = Image.new("RGB", (FR * 96, 12 * 96), (26, 20, 46))
+    prev = Image.new("RGB", (FR * 96, len(RAMPS) * 2 * 96), (26, 20, 46))
     row = 0
     for name in RAMPS:
         for kind, fn in (("cast", lambda i, n=name: cast(n, i)), ("hit", HITS[name])):

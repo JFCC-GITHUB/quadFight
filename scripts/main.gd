@@ -17,9 +17,10 @@ const LANDSCAPE := Vector2(960, 540)
 var current: Control
 var landscape_ok := false  # the current screen has a landscape layout
 ## The VS run in progress. mode "ladder": one opponent, the level keeps rising.
-## mode "tournament": every other fighter once, in random order, one level harder each time.
+## mode "tournament": TOUR_FIGHTS random other fighters, one level harder each time, then your dark self.
 var run := {}
 const START_CREDITS := 3   # tournament continues
+const TOUR_FIGHTS := 5     # random opponents before the dark boss
 const BONUS_AFTER := 3     # the car-smashing bonus stage comes after this many tournament fights
 
 ## Tournament difficulty: the CPU level range, spread evenly over the 5 fights.
@@ -79,6 +80,7 @@ func start_run(mode: String, level: int) -> void:
 			if d["id"] != player:
 				ids.append(d["id"])
 		ids.shuffle()
+		ids = ids.slice(0, TOUR_FIGHTS)
 		ids.append(Characters.DARK + player)  # the last fight: a dark version of yourself
 		run["order"] = ids
 		run["cpu"] = ids[0]

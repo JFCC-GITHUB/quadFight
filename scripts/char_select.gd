@@ -1,5 +1,6 @@
 extends Control
-## Pick your VS character (step 0) and, for LADDER, the opponent or random (step 1): 2 x 3 cards, details + animated attack preview.
+## Pick your VS character (step 0) and, for LADDER, the opponent or random (step 1): two pages (HEROES / BEASTS) of
+## 2 x 3 cards, details + animated attack preview.
 
 const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
@@ -10,6 +11,8 @@ const FxLayer := preload("res://scripts/fx_layer.gd")
 const CARD_W := 238.0
 const CARD_H := 150.0
 const HEAD := Rect2(0.1, 0.0, 0.78, 0.78)  # crop of the bust shown on a card
+const PER_PAGE := 6
+const PAGES := ["HEROES", "BEASTS"]
 
 var main: Node
 var level := 3         # CPU level chosen on the previous screen
@@ -17,6 +20,7 @@ var mode := "ladder"   # "ladder" | "tournament"
 var step := 0          # 0: your fighter, 1: the opponent (ladder)
 var random_pick := false
 var selected := 0
+var page := 0
 var time := 0.0
 var fx: Control
 var preview_t := 0.0
@@ -30,6 +34,7 @@ func _ready() -> void:
 	for i in Characters.LIST.size():
 		if Characters.LIST[i]["id"] == want:
 			selected = i
+	page = selected / PER_PAGE
 	_build()
 
 
@@ -38,7 +43,7 @@ func _build() -> void:
 		c.queue_free()
 	land = size.x > size.y
 	cards.clear()
-	for i in Characters.LIST.size():
+	for i: int in _page_ids():
 		var r := _card_rect(i)
 		var b := Button.new()
 		b.flat = true
@@ -63,6 +68,10 @@ func _build() -> void:
 	else:
 		UI.button(self, go, Rect2(110, 832, 320, 94), _start, 38, Style.BTN_PRIMARY, "swords")
 	UI.icon_button(self, "left", Rect2(16, 24, 56, 56), _back, Style.BTN_GLASS)
+	for k in PAGES.size():
+		var tr := Rect2(716 + k * 116, 28, 108, 48) if land else Rect2(26 + k * 250, 96, 238, 28)
+		UI.button(self, PAGES[k], tr, func(): _select(k * PER_PAGE), 20 if land else 18,
+			Style.BTN_ACCENT if k == page else Style.BTN_GLASS)
 	if step == 1:
 		var rr := Rect2(24, 448, 676, 64) if land else Rect2(26, 610, 488, 76)
 		UI.button(self, "RANDOM OPPONENT", rr, func():
@@ -76,7 +85,12 @@ func relayout() -> void:
 	_build()
 
 
+func _page_ids() -> Array:
+	return range(page * PER_PAGE, mini((page + 1) * PER_PAGE, Characters.LIST.size()))
+
+
 func _card_rect(i: int) -> Rect2:
+	i %= PER_PAGE
 	if land:  # 3 columns x 2 rows on the left, details on the right
 		return Rect2(24 + (i % 3) * 230.0, 100 + (i / 3) * 170.0, 220, 160)
 	return Rect2(26 + (i % 2) * (CARD_W + 12), 128 + (i / 2) * (CARD_H + 10), CARD_W, CARD_H)
@@ -99,6 +113,9 @@ func _select(i: int) -> void:
 		random_pick = false
 		_build.call_deferred()  # the RANDOM button goes back to normal
 	selected = i
+	if i / PER_PAGE != page:
+		page = i / PER_PAGE
+		_build.call_deferred()
 	var id: String = Characters.LIST[i]["id"]
 	fx.play(Characters.FX_HIT[id], Rect2(780, 304, 120, 120) if land else Rect2(400, 708, 120, 120), 10.0, true)
 	queue_redraw()
@@ -154,7 +171,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.3))
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 74 if land else 82), "CHOOSE FIGHTER" if step == 0 else "CHOOSE OPPONENT", 36, Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
-	for i in Characters.LIST.size():
+	for i: int in _page_ids():
 		var d: Dictionary = Characters.LIST[i]
 		var col := Color(d["color"])
 		var r := _card_rect(i)
@@ -163,8 +180,10 @@ func _draw() -> void:
 		var glow := Color(col, 0.45 + 0.2 * sin(time * 5.0)) if on else Color(0, 0, 0, 0)
 		draw_style_box(Style.panel_box(Color(0.1, 0.07, 0.22, 0.92) if on else Style.PANEL, 18, border, glow, 18 if on else 0), r)
 		var tx := 124.0 if land else 130.0
-		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(tx, 52), d["name"], 20 if land else 22, col if on else Style.TEXT)
-		Style.text(self, Style.caption_font(), r.position + Vector2(tx, 76), d["skill"], 13, Style.MUTED)
+		var long_name: bool = d["name"].length() > 7
+		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(tx, 52), d["name"], (16 if land else 18) if long_name else (20 if land else 22),
+			col if on else Style.TEXT)
+		Style.text(self, Style.caption_font(), r.position + Vector2(tx, 76), d["skill"], 11 if d["skill"].length() > 10 else 13, Style.MUTED)
 		_draw_pips(d["id"], r.position + Vector2(tx, 92), 22.0 if land else 24.0, col)
 
 	# details
