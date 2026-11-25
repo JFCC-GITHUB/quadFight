@@ -37,7 +37,7 @@ func _build() -> void:
 		left_pic.size = Vector2(384, 384)
 		left_pic.position = Vector2(70, 90) if land else Vector2(78, 170)
 		var x := 540.0 if land else 110.0
-		var y := 330.0 if land else 700.0
+		var y := 330.0 if land else 716.0
 		UI.button(self, "PLAY AGAIN", Rect2(x, y, 320, 84), func(): main.start_run("tournament", run["base"]), 30,
 			Style.BTN_PRIMARY, "retry")
 		UI.button(self, "MENU", Rect2(x, y + 98, 320, 70), func(): main.show_title(), 26, Style.BTN_GLASS, "home")
@@ -116,7 +116,7 @@ func _draw() -> void:
 		var lines := ["You beat every fighter,", "even your own dark self.", "Tournaments won:  %d" % Settings.tour_clears,
 			"Won with  %s" % Characters.def(run["player"])["name"]]
 		for i in lines.size():
-			Style.text(self, Style.FONT_SEMI, Vector2(540 if land else 0, (200 if land else 640) + i * 30), lines[i], 20,
+			Style.text(self, Style.FONT_SEMI, Vector2(540 if land else 0, (200 if land else 596) + i * 30), lines[i], 20,
 				Style.TEXT if i != 2 else Style.GOLD, HORIZONTAL_ALIGNMENT_LEFT if land else HORIZONTAL_ALIGNMENT_CENTER,
 				400.0 if land else size.x)
 		return

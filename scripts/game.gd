@@ -135,6 +135,7 @@ func _ready() -> void:
 		add_child(player_portrait)
 		cpu_portrait = Portrait.new()
 		cpu_portrait.set_char(cpu_char)
+		cpu_portrait.flip_h = true  # the busts face right: the opponent on the right looks at the board
 		add_child(cpu_portrait)
 		fx_layer = FxLayer.new()
 		fx_layer.size = size

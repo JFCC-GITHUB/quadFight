@@ -85,6 +85,10 @@ func relayout() -> void:
 	_build()
 
 
+func _cols() -> int:
+	return 3 if land else 2
+
+
 func _page_ids() -> Array:
 	return range(page * PER_PAGE, mini((page + 1) * PER_PAGE, Characters.LIST.size()))
 
@@ -144,15 +148,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		_select(selected - 1)
 	elif event.is_action_pressed("move_right") and selected < Characters.LIST.size() - 1:
 		_select(selected + 1)
-	elif event.is_action_pressed("soft_drop") and selected + 2 < Characters.LIST.size():
-		_select(selected + 2)
-	elif event.is_action_pressed("rotate_cw") and selected >= 2:
-		_select(selected - 2)
+	elif event.is_action_pressed("soft_drop") and selected % PER_PAGE + _cols() < PER_PAGE:
+		_select(selected + _cols())
+	elif event.is_action_pressed("rotate_cw") and selected % PER_PAGE >= _cols():
+		_select(selected - _cols())
 
 
 func _process(delta: float) -> void:
 	time += delta
 	queue_redraw()
+
+
+## Largest font size (at most `fs`) at which `text` fits in `avail` pixels.
+func _fit(font: Font, text: String, fs: int, avail: float) -> int:
+	while fs > 8 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > avail:
+		fs -= 1
+	return fs
 
 
 ## Little numbered squares showing what a recipe needs.
@@ -180,11 +191,13 @@ func _draw() -> void:
 		var glow := Color(col, 0.45 + 0.2 * sin(time * 5.0)) if on else Color(0, 0, 0, 0)
 		draw_style_box(Style.panel_box(Color(0.1, 0.07, 0.22, 0.92) if on else Style.PANEL, 18, border, glow, 18 if on else 0), r)
 		var tx := 124.0 if land else 130.0
-		var long_name: bool = d["name"].length() > 7
-		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(tx, 52), d["name"], (16 if land else 18) if long_name else (20 if land else 22),
-			col if on else Style.TEXT)
-		Style.text(self, Style.caption_font(), r.position + Vector2(tx, 76), d["skill"], 11 if d["skill"].length() > 10 else 13, Style.MUTED)
-		_draw_pips(d["id"], r.position + Vector2(tx, 92), 22.0 if land else 24.0, col)
+		var avail := r.size.x - tx - 10.0
+		Style.text(self, Style.FONT_DISPLAY, r.position + Vector2(tx, 52), d["name"],
+			_fit(Style.FONT_DISPLAY, d["name"], 20 if land else 22, avail), col if on else Style.TEXT)
+		Style.text(self, Style.caption_font(), r.position + Vector2(tx, 76), d["skill"],
+			_fit(Style.caption_font(), d["skill"], 13, avail), Style.MUTED)
+		var n: int = Characters.pips(d["id"]).size()
+		_draw_pips(d["id"], r.position + Vector2(tx, 92), minf(22.0 if land else 24.0, (avail - 5.0 * (n - 1)) / n), col)
 
 	# details
 	var d: Dictionary = Characters.LIST[selected]

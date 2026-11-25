@@ -158,7 +158,7 @@ func _schedule(p: Dictionary, extra := 0.0, slip := true) -> void:
 	exec_rot = plan_rot
 	exec_x = plan_x
 	if slip and rng.randf() < p["slip"] * (1.0 + _panic()):
-		if rng.randf() < 0.5:
+		if rng.randf() < 0.5 or kind == 1:  # the O piece looks the same in every rotation
 			exec_x = clampi(plan_x + (1 if rng.randf() < 0.5 else -1), -2, COLS)
 		else:
 			exec_rot = (plan_rot + (1 if rng.randf() < 0.5 else 3)) % 4
