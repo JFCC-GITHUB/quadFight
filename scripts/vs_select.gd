@@ -187,7 +187,7 @@ func _draw_level_card(card: Rect2, cap: Font, cx: float) -> void:
 	var p := CpuPlayer.params(level)
 	var rows := [
 		["REACTION", "%.2f s" % p["think"]],
-		["MOVE SPEED", "%.1f moves / sec" % (1.0 / p["act"])],
+		["KEY SPEED", "%.1f taps / sec" % (1.0 / p["key"])],
 		["MISTAKES", "%d%% of pieces" % roundi(p["mistake"] * 100.0) if p["mistake"] >= 0.01 else "almost none" if p["mistake"] > 0.0 else "none"],
 		["THINKS AHEAD", "next piece" if level >= CpuPlayer.LOOKAHEAD_FROM else "this piece"],
 	]
