@@ -9,7 +9,7 @@ const FxLayer := preload("res://scripts/fx_layer.gd")
 
 const CARD_W := 238.0
 const CARD_H := 150.0
-const HEAD := Rect2(0.18, 0.0, 0.64, 0.64)  # crop of the bust shown on a card
+const HEAD := Rect2(0.1, 0.0, 0.78, 0.78)  # crop of the bust shown on a card
 
 var main: Node
 var level := 3         # CPU level chosen on the previous screen

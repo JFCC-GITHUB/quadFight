@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Animal fighters as hand-built 48x48 pixel art (see pixelkit.py).
+"""The 12 fighters as 64x64 pixel-art busts in 3/4 view (facing right), built with pix3.py: curved parts with
+contour-following shading, hue-shifted ramps, selective outlines, jagged fur bands and typed face stamps.
 
-Writes assets/chars/<id>.png (480 px), <id>_s.png and <id>_dark.png. Run: python3 tools/gen_animals2.py [id ...]
+Writes assets/chars/<id>.png (512 px, 8x nearest) and <id>_dark.png, plus the skill icons.
+Run: python3 tools/gen_fighters.py [id ...]   (contact sheet -> $SHEET_DIR/fighters_sheet.png)
 """
 import os
 import sys
@@ -9,362 +11,405 @@ import sys
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_assets import ASSETS, Icon  # noqa: E402
-from pixelkit import E, N, P, R, S, UP, Sprite, flip  # noqa: E402
+from gen_assets import Icon  # noqa: E402
+from pix3 import Cv  # noqa: E402
 
-INK = "#1c1210"
-FUR = ["#e0a868", "#b87c44", "#8a5a30", "#5a3418", "#24120a"]
-CREAM = ["#fff0d8", "#f0d8b0", "#c8a478", "#8a6a48", "#24120a"]
-IRON = ["#e8ecf4", "#b4bccc", "#7a849c", "#3e465e", "#14182a"]
-CLOTH = ["#6a5a66", "#4a3e4e", "#32283a", "#1c1424", "#0c0810"]
-PINK = ["#ffd0b0", "#f0a888", "#c8705a", "#8a4040", "#24120a"]
-
-
-def both(s, mask, ramp, **kw):
-    """The part and its mirror image."""
-    s.part(mask, ramp, **kw)
-    s.part(flip(mask), ramp, **kw)
-
-
-# ------------------------------------------------------------------ IRONPAW: a scarred bear warrior
-def ironpaw():
-    s = Sprite()
-    s.part(R(3, 38, 44, 47) | E(24, 47, 21, 8), CLOTH)
-    s.part(P((15, 37), (32, 37), (30, 46), (24, 47), (17, 46)), IRON)                        # iron chest plate
-    s.line((24, 38), (24, 46), "#3e465e")
-    s.dots([(19, 40), (28, 40), (19, 44), (28, 44)], "#ffd27a")
-    both(s, E(9, 42, 8, 6) | P((1, 47), (1, 40), (4, 43), (5, 37), (9, 42), (12, 37), (14, 43), (15, 47)), FUR)  # fur mantle
-    both(s, E(11, 10, 5, 5), FUR)                                                            # ears
-    both(s, E(11, 10, 2.5, 2.5), PINK, outline=False, rim=False)
-    head = E(24, 21, 16, 13) | E(10, 24, 5, 6) | E(37, 24, 5, 6)
-    s.part(head, FUR)                                                                        # head and cheek ruff
-    s.fur(head, "#5a3418", 110, seed=3); s.fur(head, "#e0a868", 60, seed=4, length=2)
-    s.part(E(24, 28, 9, 6), CREAM)                                                           # muzzle
-    s.stamp(20, 25, ["oooooooo", "okkkkkko", ".okkkko.", "..oooo.."], {"o": INK, "k": INK})  # nose
-    s.line((24, 29), (24, 31), INK)
-    s.stamp(19, 32, ["oo....oo", ".oooooo."], {"o": INK})                                     # frown
-    eye = ["oEWEEo.", ".oEEEo."]
-    pal = {"o": INK, "E": "#ffb02a", "W": "#fff0c0"}
-    s.mstamp(13, 18, eye, pal)
-    s.mstamp(12, 15, ["oooo...", ".oooooo"], {"o": "#3a2010"})                                 # heavy brow, slanted
-    for k in range(3):                                                                       # three claw scars over the left eye
-        s.line((11 + k * 2, 11 + k), (17 + k * 2, 26 + k), "#ff6a5a")
-    return s.done()
+UP = 8
+# ramps are [highlight, light, mid, dark, deep]: highlights lean warm, shadows lean purple
+GOLD = ["#fff8c0", "#ffd450", "#e09a28", "#a0602a", "#4a2418"]
+STEEL = ["#f4fbff", "#b4c8ee", "#6a88c8", "#2e468c", "#120c3a"]
+IRON = ["#f4fbff", "#b6c8dc", "#7486a8", "#454c74", "#1c1834"]
+GEM = ["#ffffff", "#c8f4ff", "#58d0ff", "#2090d0", "#0a2a6a"]
+RED = ["#ffb08a", "#ee5a48", "#b42c3a", "#6e1834", "#2c0a1e"]
+LEATHER = ["#c89a60", "#946238", "#623c28", "#3e2222", "#1a0c14"]
+SKIN = ["#ffe0c0", "#f6b890", "#d0805e", "#8e4a48", "#341428"]
+WHITE = ["#ffffff", "#f0f4fc", "#c4cce4", "#8a90b8", "#2e2a4c"]
+PINK = ["#ffd6c8", "#f2a0a0", "#c46a74", "#7c3448", "#2e1422"]
 
 
-# ------------------------------------------------------------------ MOONFANG: a silver lone wolf
-FUR_W = ["#f4f8ff", "#c8d2e6", "#8a98b4", "#4a5670", "#10141f"]
-SCARF = ["#8aaaff", "#5a7ae0", "#3a52b0", "#1e2c70", "#0a1034"]
-NAVY = ["#4a5878", "#323e5c", "#222c46", "#141a2c", "#080a14"]
+def torso(c, ramp, fur=False):
+    c.part(c.poly((10, 44), (46, 40), (56, 48), (60, 64), (2, 64), (4, 52)), ramp, fur=fur)
 
 
-def moonfang():
-    s = Sprite()
-    s.part(R(3, 38, 44, 47) | E(24, 47, 21, 8), NAVY)
-    s.part(P((13, 36), (34, 36), (38, 40), (46, 43), (40, 47), (33, 42), (15, 42)), SCARF)  # ragged scarf
-    s.part(E(24, 44, 4, 4), ["#fff", "#f0f6ff", "#b8ccee", "#7a94c8", INK])                  # the moon
-    s.part(E(26, 43, 4, 4), SCARF, outline=False, rim=False)
-    both(s, P((4, 45), (7, 37), (10, 41), (13, 34), (16, 40), (18, 46)), FUR_W)               # neck fur
-    both(s, P((9, 20), (8, 2), (21, 12)), FUR_W)                                              # tall ears
-    both(s, P((11, 17), (11, 7), (18, 13)), ["#6a7a98", "#3a4660", "#242c40", "#161c2c", INK], outline=False, rim=False)
-    wolf_head = P((10, 22), (15, 13), (24, 10), (33, 13), (38, 22), (43, 29), (34, 33), (24, 36), (14, 33), (5, 29))
-    s.part(wolf_head, FUR_W)                                                                 # head
-    s.fur(wolf_head, "#4a5670", 90, seed=5); s.fur(wolf_head, "#ffffff", 40, seed=6, length=2)
-    s.part(E(24, 29, 6, 8), ["#fff", "#f4f8ff", "#c8d2e6", "#8a98b4", INK])  # muzzle
-    s.stamp(21, 27, ["oooooo", ".okko.", "..oo.."], {"o": INK, "k": "#2a3248"})               # nose
-    s.line((24, 30), (24, 33), INK)
-    s.dots([(21, 33), (21, 34), (27, 33), (27, 34)], "#ffffff")                                # fangs
-    s.dots([(20, 33), (28, 33)], INK)
-    pal = {"o": INK, "E": "#46c8ff", "W": "#e8faff"}
-    s.mstamp(12, 19, [".ooooo", "oEWEEo", ".ooEo."], pal)
-    s.mstamp(10, 23, ["o....", ".o..."], {"o": "#5a6478"})
-    return s.done()
+def bolt(c, pts, color):
+    for a, b in zip(pts, pts[1:]):
+        c.line(a, b, color)
 
 
-# ------------------------------------------------------------------ NIGHTOWL: a wise night owl in round glasses
-PLUM = ["#d8c8b0", "#a89478", "#74604c", "#44362c", "#1c1410"]
-WING = ["#6a7ad0", "#4a5ab0", "#2a3a80", "#161e50", "#080c24"]
-FACE = ["#fffbe8", "#f4e8d0", "#d0bc98", "#a08c68", "#1c1410"]
-GOLD = ["#fff2a8", "#ffd24a", "#e0a020", "#a06a10", "#4a2a08"]
+def claws(c, roots, light="#eef6ff", dark="#7486a8"):
+    for (x0, y0), (x1, y1) in roots:
+        c.line((x0, y0), (x1, y1), light)
+        c.line((x0 + 1, y0 + 1), (x1 + 1, y1 + 1), dark)
+        c.dots([(x1, y1)], "#ffffff")
 
 
-def nightowl():
-    s = Sprite()
-    s.part(R(4, 38, 43, 47) | E(24, 47, 20, 8), WING)
-    both(s, E(10, 42, 7, 6) | P((3, 47), (3, 38), (6, 36), (14, 38), (15, 47)), WING)
-    for x in (6, 10, 14):
-        s.line((x, 40), (x + 1, 46), "#8a9ae0")
-        s.line((47 - x, 40), (46 - x, 46), "#8a9ae0")
-    s.part(P((15, 37), (33, 37), (30, 46), (24, 47), (18, 46)), FACE)                         # belly
-    for y in (40, 43):
-        s.line((19, y), (24, y + 2), "#a08c68"); s.line((24, y + 2), (29, y), "#a08c68")
-    both(s, P((11, 15), (7, 3), (20, 9)), PLUM)                                               # ear tufts
-    s.part(E(24, 22, 16, 15), PLUM)
-    both(s, E(15, 24, 8, 8), FACE)                                                            # facial discs
-    for cx in (15, 33):
-        s.part(E(cx, 24, 5, 5), GOLD)
-        s.stamp(cx - 1, 22, ["oo", "oo", "oo"], {"o": INK})                                   # pupils
-        s.dots([(cx - 3, 21), (cx - 3, 22)], "#fffbe8")
-    ring = lambda cx: E(cx, 24, 7, 7) & ~E(cx, 24, 5.4, 5.4)                                  # glasses
-    s.part(ring(15) | ring(33), GOLD, outline=False)
-    s.line((21, 24), (27, 24), "#e0a020")
-    s.mstamp(7, 14, [".....oo", "oooooo."], {"o": "#2a2018"})                                 # angry brows
-    s.part(P((22, 28), (26, 28), (24, 36)), ["#ffd27a", "#ffb040", "#d07818", "#8a4a08", INK])  # beak
-    return s.done()
-
-
-# ------------------------------------------------------------------ OLDSHELL: an old turtle monk
-TURTLE = ["#c8f090", "#92c864", "#5a9a40", "#2a5a28", "#0c240c"]
-SHELL = ["#c8a060", "#9a7a44", "#6a5028", "#3a2a14", "#140c04"]
-ROBE = ["#8a7a52", "#6a5836", "#4a3a20", "#2a1e0c", "#100a04"]
-STRAW = ["#fff0b0", "#f2d686", "#c89c48", "#8a6a28", "#3a280c"]
-WHITE = ["#ffffff", "#f0f2f8", "#c4ccdc", "#8a94ac", "#2a3048"]
-
-
-def oldshell():
-    s = Sprite()
-    s.part(E(24, 40, 23, 16), SHELL)                                                         # the shell behind
-    for cx, cy in ((9, 38), (38, 38), (17, 45), (31, 45), (24, 36)):                         # hexagon plates
-        pts = [(cx - 4, cy), (cx - 2, cy - 3), (cx + 2, cy - 3), (cx + 4, cy), (cx + 2, cy + 3), (cx - 2, cy + 3), (cx - 4, cy)]
-        for a, b in zip(pts, pts[1:]):
-            s.line(a, b, "#3a2a14")
-    s.part(R(10, 37, 37, 47) | E(24, 47, 15, 8), ROBE)
-    s.line((12, 42), (36, 42), "#58b048")                                                     # sash
-    s.line((12, 43), (36, 43), "#2a7a28")
-    s.part(E(24, 25, 12, 13), TURTLE)                                                        # head
-    s.line((17, 37), (31, 37), "#2a5a28")
-    s.part(P((24, 2), (44, 14), (47, 18), (1, 18), (4, 14)), STRAW)                           # straw hat
-    for x in (10, 17, 24, 31, 38):
-        s.line((24, 3), (24 + (x - 24) * 1.3, 17), "#b8903c")
-    pal = {"o": INK, "E": "#ffc23a"}
-    s.mstamp(16, 24, ["ooooo.", ".oEEoo"], pal)                                              # sleepy, wise eyes
-    s.mstamp(15, 21, ["ooooooo"], {"o": "#f0f2f8"})                                          # white brows
-    s.line((20, 32), (28, 32), "#1c3a14")
-    both(s, P((24, 30), (14, 31), (8, 38), (18, 34)), WHITE)                                  # long mustache
-    s.part(P((17, 32), (31, 32), (28, 43), (24, 47), (20, 43)), WHITE)                        # beard
-    return s.done()
-
-
-# ------------------------------------------------------------------ LILYHOP: a ronin frog with a lily-pad hat
-FROG = ["#c0f890", "#8ae060", "#4aa840", "#206a30", "#0a2a10"]
-PAD = ["#a8f070", "#62cc4c", "#3a9a38", "#1a6a28", "#082a10"]
-TEAL = ["#5aaab0", "#3a8a8a", "#22606e", "#0e3a4a", "#041820"]
-BELLY = ["#fcffd0", "#ecf6b0", "#bcd880", "#8aa850", "#2a3a10"]
-
-
-def lilyhop():
-    s = Sprite()
-    s.part(P((40, 28), (43, 27), (47, 47), (44, 47)), ["#fff", "#dce4f0", "#a8b4c8", "#6a7488", INK])  # katana blade behind the shoulder
-    s.part(R(39, 16, 44, 27), ["#e86a6a", "#c03a3a", "#8a2028", "#5a1018", "#1a0408"])                 # wrapped hilt
-    for y in (18, 21, 24):
-        s.line((39, y), (44, y), "#fbd0d0")
-    s.part(E(41.5, 28, 5, 2), GOLD)                                                                     # guard
-    s.part(R(5, 38, 42, 47) | E(24, 47, 20, 8), TEAL)
-    s.line((8, 41), (40, 41), "#ff9ab8")
-    s.line((8, 42), (40, 42), "#d0608a")
-    s.part(E(24, 38, 9, 7), BELLY)                                                           # throat pouch
-    s.part(E(24, 29, 19, 10), FROG)                                                          # wide head
-    s.part(E(24, 14, 17, 5), FROG)                                                           # top of the head under the hat
-    for cx in (13, 35):                                                                      # bulging eyes
-        s.part(E(cx, 19, 7, 7), FROG)
-        s.part(E(cx, 19, 4, 4), GOLD)
-        s.stamp(cx - 3, 19, ["oooooo"], {"o": INK})                                           # horizontal pupil
-        s.dots([(cx - 3, 17), (cx - 2, 17)], "#fffbe8")
-    s.line((9, 29), (16, 33), "#0a2a10"); s.line((16, 33), (32, 33), "#0a2a10"); s.line((32, 33), (39, 29), "#0a2a10")  # wide smile
-    s.line((29, 33), (36, 37), "#c8f060"); s.line((36, 37), (42, 34), "#c8f060")             # blade of grass
-    s.dots([(15, 28), (16, 28), (32, 28), (33, 28)], "#206a30")                              # nostrils
-    s.part(E(24, 6.5, 18, 4.5), PAD)                                                             # lily-pad hat
-    s.line((24, 6.5), (10, 5), "#1a6a28"); s.line((24, 6.5), (38, 5), "#1a6a28")
-    s.part(P((24, 3), (21, 0), (23, 4)) | P((24, 3), (27, 0), (25, 4)), ["#ffe6f0", "#ffb0c8", "#e0608a", "#a03a60", INK])
-    s.dots([(24, 2), (24, 3)], "#fff6a0")
-    return s.done()
-
-
-# ------------------------------------------------------------------ MASKCAT: a masked cat burglar
-CAT = ["#ffffff", "#fffafe", "#e4d4ec", "#b4a0c8", "#3a2a4a"]
-MASK = ["#c070f0", "#9a46d8", "#6a22a8", "#3a0a68", "#14022c"]
-CAPE = ["#a060d8", "#7a3ab0", "#521a84", "#2a0a50", "#10021c"]
-
-
-def maskcat():
-    s = Sprite()
-    tail = E(0, 0, 0.1, 0.1)
-    for i in range(16):                                                                      # a curling tail behind the shoulder
-        t = i / 15.0
-        x, y = 41 + 5 * (t ** 0.5) * (1 - t * 0.2), 46 - 38 * t + 10 * t * t
-        tail = tail | E(min(x, 45), y, 3.0, 3.0)
-    s.part(tail, CAT)
-    s.part(R(3, 38, 44, 47) | E(24, 47, 21, 8), CAPE)
-    s.part(P((13, 37), (24, 44), (35, 37), (38, 41), (24, 47), (10, 41)), CAT)                # collar
-    s.dots([(24, 44), (23, 44), (25, 44)], "#ff7ab8")
-    both(s, P((9, 20), (8, 2), (19, 10)), CAT)                                                # ears
-    both(s, P((11, 17), (11, 7), (16, 11)), PINK, outline=False, rim=False)
-    s.part(P((9, 24), (13, 14), (24, 11), (35, 14), (39, 24), (41, 30), (33, 36), (24, 38), (15, 36), (7, 30)), CAT)
-    patch = P((9, 20), (15, 16), (23, 19), (23, 25), (16, 26), (11, 25))
-    s.part(patch | flip(patch) | R(21, 19, 27, 21), MASK)                                    # mask: two eye patches and a bridge
-    pal = {"o": INK, "E": "#a8ff3a", "W": "#f4ffc0"}
-    s.mstamp(12, 20, ["oooooo", "oEWEEo", ".oEEo."], pal)
-    s.stamp(22, 28, ["ooooo", ".ooo."], {"o": "#ff7ab8"})                                     # nose
-    s.line((24, 30), (24, 32), "#7a3a68")
-    s.line((18, 33), (24, 34), "#7a3a68"); s.line((24, 34), (30, 33), "#7a3a68"); s.line((30, 33), (31, 31), "#7a3a68")  # smirk
-    s.dots([(28, 34), (28, 35)], "#ffffff")                                                  # one fang
-    for dy in (0, 2):                                                                        # whiskers
-        s.line((16, 29 + dy), (2, 27 + dy * 2), "#ffffff")
-        s.line((32, 29 + dy), (46, 27 + dy * 2), "#ffffff")
-    return s.done()
-
-
-# ------------------------------------------------------------------ the first six fighters
-STEEL = ["#f0f6ff", "#b4c8ee", "#6a88c8", "#2e468c", "#0a1030"]
-DEEP = ["#44506c", "#303a54", "#202840", "#121830", "#060a18"]
-GEM = ["#ffffff", "#c8f4ff", "#58d0ff", "#2090d0", "#0a3a6a"]
+# ------------------------------------------------------------------ BASTION: a knight in blue plate, sword on his back
+DEEP = ["#6a74a0", "#454c78", "#2c3054", "#1a1a38", "#0a081c"]
 VISOR = ["#34406a", "#202a4a", "#121830", "#080c20", "#02040c"]
-BLADE_EYE = [".ooooo.", "oEWEEEo", "..oEEo."]
 
 
 def bastion():
-    s = Sprite()
-    s.part(R(3, 37, 44, 47) | E(24, 47, 21, 9), DEEP)
-    both(s, P((17, 17), (2, 4), (9, 16), (0, 14), (10, 23), (4, 27), (18, 26)), STEEL)              # swept blades behind the helm
-    both(s, P((0, 47), (0, 37), (5, 31), (14, 34), (17, 40), (16, 47)) | E(8, 40, 7, 6), STEEL)    # pauldrons
-    s.part(P((16, 37), (32, 37), (30, 45), (24, 47), (18, 45)), STEEL)                            # chest plate
-    s.part(P((24, 39), (27, 42), (24, 46), (21, 42)), GEM)
-    s.part(E(24, 17, 12, 12) | R(12, 17, 35, 30) | P((12, 30), (35, 30), (30, 36), (17, 36)), STEEL)  # helm
-    s.part(P((22, 11), (24, 0), (26, 11), (24, 17)), ["#fff2a8", "#ffd24a", "#d08a20", "#8a4a10", "#3a1a04"])  # crest
-    s.part(P((12, 16), (24, 21), (36, 16), (35, 25), (24, 30), (13, 25)), VISOR)                   # V visor
-    s.mstamp(13, 17, BLADE_EYE, {"o": INK, "E": "#38d0ff", "W": "#e0fcff"})
-    s.line((24, 4), (24, 15), "#ffe49a", native=True)
-    s.dots([(15, 31), (17, 33), (31, 31), (29, 33)], "#2e468c")                                    # cheek vents
-    s.mstamp(12, 23, ["o..", ".o."], {"o": "#2e468c"})
-    return s.done()
+    c = Cv(64, 64)
+    c.part(c.rect(53, 1, 57, 42), STEEL); c.line((54, 2), (54, 40), "#ffffff")                      # sword behind
+    c.part(c.rect(49, 40, 61, 43), GOLD); c.part(c.rect(53, 44, 57, 52), LEATHER)
+    c.part(c.poly((24, 7), (14, 2), (3, 6), (10, 9), (1, 14), (12, 13), (6, 20), (21, 12)), RED, fur=True)  # plume
+    torso(c, DEEP)
+    c.part(c.poly((18, 46), (44, 43), (50, 54), (50, 64), (14, 64), (14, 54)), STEEL)              # breastplate
+    c.part(c.poly((32, 49), (36, 54), (32, 60), (28, 54)), GEM)
+    c.part(c.ell(11, 46, 11, 8) | c.poly((2, 41), (0, 32), (9, 39)) | c.poly((10, 39), (12, 30), (17, 39)), STEEL)
+    c.part(c.ell(51, 48, 10, 7), STEEL)
+    c.part(c.ell(29, 23, 15, 16) | c.poly((15, 28), (45, 23), (47, 33), (37, 42), (19, 40)), STEEL)  # helm
+    c.part(c.poly((19, 11), (28, 1), (37, 5), (31, 9), (24, 12)), GOLD)                             # crest fin
+    c.part(c.poly((17, 18), (46, 15), (46, 23), (19, 26)), VISOR, hi=False)                          # visor slit
+    c.stamp(22, 19, [".EEEEE", "EEWWEE", ".EEEE."], {"E": "#38d0ff", "W": "#e8feff"})
+    c.stamp(38, 18, ["EEEE", "EWWE", ".EE."], {"E": "#38d0ff", "W": "#e8feff"})
+    for x in (34, 37, 40, 43):                                                                     # breathing vents
+        c.line((x, 30), (x - 1, 34), "#2e468c")
+    c.dots([(20, 47), (44, 46), (18, 58), (46, 58)], "#ffd450")
+    return c
 
 
-ICE = ["#f4ffff", "#a8e0ff", "#58a8f0", "#2a58b8", "#081850"]
-ICE_DARK = ["#243a6a", "#162450", "#0c1638", "#060c24", "#02040e"]
-WOOD = ["#c8a068", "#a07a44", "#6a4a24", "#3a2410", "#140a04"]
-
-
-def frost():
-    s = Sprite()
-    s.part(R(40, 7, 42, 46), WOOD)                                                                  # staff behind
-    s.part(E(41, 5, 3.4, 3.4), GEM)
-    s.part(R(3, 37, 44, 47) | E(24, 47, 21, 9), ["#5a8ad0", "#3a62b0", "#244088", "#122660", "#060c28"])
-    for xs, ys in (((2, 4, 10), (44, 24, 38)), ((8, 6, 14), (38, 28, 36))):
-        both(s, P((xs[0], ys[0] + 10), (xs[1], ys[1]), (xs[2], ys[2])), ICE)                         # shoulder ice spikes
-    s.part(P((24, 1), (33, 9), (39, 22), (42, 38), (34, 44), (14, 44), (6, 38), (9, 22), (15, 9)), ICE)  # hood
-    s.part(P((24, 12), (32, 20), (33, 32), (24, 40), (15, 32), (16, 20)), ICE_DARK)                  # dark face
-    s.mstamp(16, 24, BLADE_EYE, {"o": INK, "E": "#58d0ff", "W": "#f0ffff"})
-    fur = E(0, 0, 0.1, 0.1)
-    for i in range(7):
-        fur = fur | E(10 + i * 4.7, 42, 3.2, 3.2)
-    s.part(fur | R(9, 41, 39, 46), WHITE_FUR := ["#ffffff", "#f0f6ff", "#c0d8f0", "#8aa8d0", "#2a3a68"])   # fur collar
-    for cx, h in ((24, 9), (17, 6), (31, 6)):                                                       # crown crystals
-        s.part(P((cx, 2 - h // 3), (cx + 3, 8), (cx - 3, 8)), ICE)
-    s.part(P((24, 44), (27, 47), (21, 47)), GEM)
-    return s.done()
-
-
-FLAME = ["#fffbd0", "#ffd24a", "#ff7a2a", "#c8281a", "#4a0a08"]
-SKIN = ["#ffd8b0", "#f3b48a", "#c47a52", "#8a4a30", "#2a1008"]
-CRIM = ["#c8484a", "#8a2030", "#5a1020", "#34080e", "#140204"]
-HOOD = ["#5a4a62", "#3a2e44", "#241a2e", "#120c1a", "#06040a"]
+# ------------------------------------------------------------------ BLAZE: a fire ninja holding a fireball
+FLAME = ["#fffbd0", "#ffd24a", "#ff7a2a", "#c8281a", "#4a0a14"]
+CORE = ["#ffffff", "#fffbd0", "#ffe680", "#ffb030", "#ff7a2a"]
+CRIM = ["#e8645a", "#b8303e", "#7a1830", "#480c22", "#1a0410"]
+HOOD = ["#6a5a7a", "#463a58", "#2c2440", "#18122a", "#080414"]
 
 
 def blaze():
-    s = Sprite()
-    s.part(P((30, 38), (47, 28), (42, 36), (47, 41), (40, 43), (45, 49), (33, 45)), FLAME)            # scarf tail
-    s.part(R(5, 38, 42, 47) | E(24, 47, 20, 9), HOOD)
-    s.line((10, 45), (17, 39), "#ff7a2a"); s.line((17, 39), (24, 44), "#ff7a2a"); s.line((24, 44), (31, 39), "#ff7a2a"); s.line((31, 39), (38, 45), "#ff7a2a")
-    s.part(P((12, 17), (5, 6), (14, 11), (11, 0), (20, 8), (24, 0), (28, 8), (37, 0), (34, 11), (43, 6), (36, 17)), FLAME)  # flame hair
-    s.part(P((16, 15), (14, 7), (21, 12), (24, 5), (27, 12), (34, 7), (32, 15)), ["#fffbe0", "#ffeb90", "#ffb030", "#e06818", "#6a1a08"], outline=False)
-    s.part(E(24, 22, 12, 13), HOOD)                                                                 # hood
-    s.part(R(12, 16, 35, 25), SKIN)                                                                 # eye band
-    s.part(P((12, 26), (35, 26), (32, 33), (24, 38), (16, 33)), CRIM)                               # face mask
-    s.part(R(11, 11, 36, 15), ["#e86850", "#c8404a", "#8a2030", "#5a1020", "#1a0408"])               # headband
-    s.part(R(21, 10, 26, 16), STEEL_PLATE := ["#ffffff", "#e0e8f4", "#9aa8c4", "#5a6a88", "#1a2030"])
-    s.dots([(23, 12), (24, 12), (24, 13)], "#ff5a1a")
-    s.mstamp(13, 18, ["..oooooo", ".oEEEEEo", "oEWWEEEo", ".ooEEEo."], {"o": INK, "E": "#ff3a10", "W": "#fff6c0"})
-    s.mstamp(13, 16, ["ooo....", ".ooooo."], {"o": "#3a1008"})                                         # fierce brows
-    return s.done()
+    c = Cv(64, 64)
+    c.part(c.poly((16, 40), (3, 35), (7, 41), (0, 47), (10, 45), (6, 52), (18, 46)), CRIM, fur=True)  # scarf tail
+    c.part(c.poly((34, 8), (24, 0), (24, 6), (12, 0), (15, 8), (1, 6), (9, 14), (0, 19), (11, 21), (5, 29),
+                  (18, 24)), FLAME, fur=True)                                                          # flame hair
+    torso(c, HOOD)
+    bolt(c, [(8, 56), (16, 50), (24, 56), (32, 50), (40, 56), (48, 50)], "#ff7a2a")
+    c.part(c.ell(31, 26, 13, 14), SKIN)
+    c.part(c.ell(29, 15, 14, 7) | c.poly((20, 12), (24, 4), (30, 10), (36, 3), (40, 12)), FLAME, fur=True)
+    c.part(c.poly((18, 15), (44, 14), (44, 18), (18, 19)), CRIM)                                     # headband
+    c.part(c.poly((19, 15), (8, 11), (4, 15), (10, 17), (5, 22), (18, 19)), CRIM, fur=True)
+    c.part(c.rect(34, 13, 39, 19), IRON)
+    c.dots([(36, 15), (37, 15), (37, 16)], "#ff5a1a")
+    c.part(c.poly((18, 28), (44, 26), (45, 32), (37, 40), (24, 40), (18, 34)), CRIM)                 # face mask
+    c.stamp(22, 20, ["oooooo.", "oEWWEEo", ".oEEEo."], {"o": "#3a0a14", "E": "#ff3a10", "W": "#fff6c0"})
+    c.stamp(37, 20, ["ooooo", "oWEEo", ".oEo."], {"o": "#3a0a14", "E": "#ff3a10", "W": "#fff6c0"})
+    c.line((21, 18), (28, 20), "#3a0a14"); c.line((37, 19), (42, 18), "#3a0a14")
+    c.part(c.poly((44, 64), (47, 52), (58, 50), (62, 64)), HOOD)                                     # sleeve
+    c.part(c.ell(53, 51, 6, 5), SKIN)                                                              # fist
+    c.part(c.ell(53, 38, 8, 8) | c.poly((47, 34), (50, 24), (53, 31), (57, 23), (59, 34)), FLAME, fur=True)  # fireball
+    c.part(c.ell(53, 39, 4, 4), CORE, outline=False)
+    return c
 
 
-JACKET = ["#b080f0", "#8a52d8", "#5a2a9c", "#341664", "#12062c"]
-YEL = ["#fffbd0", "#ffe65a", "#e0a000", "#9a6a00", "#3a2200"]
-RED = ["#ff9a8a", "#ff6a6a", "#c82a3a", "#8a1428", "#34040c"]
-HAIR = ["#fffbd0", "#ffe27a", "#f0a800", "#a86a00", "#3a2200"]
+# ------------------------------------------------------------------ FROST: an ice mage with a crystal staff
+ICE = ["#f4ffff", "#a8e0ff", "#58a8f0", "#2a58b8", "#10104a"]
+ICE_DARK = ["#243a6a", "#162450", "#0c1638", "#060c24", "#02040e"]
+ROBE_B = ["#7aa8e8", "#4a78c8", "#2c4c98", "#1a2a68", "#0a0c30"]
+WOOD = ["#d8b078", "#a87c48", "#704c2c", "#442a22", "#1a0c10"]
+
+
+def frost():
+    c = Cv(64, 64)
+    c.part(c.rect(54, 8, 57, 64), WOOD)                                                             # staff
+    c.part(c.ell(55, 7, 5, 5), GEM)
+    for x0, y0, x1, y1 in ((51, 6, 48, 0), (59, 6, 62, 0), (55, 2, 55, -2)):
+        c.part(c.poly((x0 - 1, y0), (x1, y1), (x0 + 1, y0)), ICE)
+    torso(c, ROBE_B)
+    c.part(c.poly((2, 46), (4, 30), (11, 43)) | c.poly((9, 44), (13, 33), (16, 43)), ICE)            # shoulder ice
+    c.part(c.poly((22, 1), (34, 6), (44, 16), (48, 32), (43, 44), (12, 44), (6, 34), (8, 18), (14, 8)), ICE)  # hood
+    for cx in (20, 26, 32):
+        c.part(c.poly((cx - 2, 7), (cx, 0 + abs(cx - 26) // 2), (cx + 2, 7)), ICE)
+    c.part(c.poly((29, 13), (42, 17), (45, 31), (37, 40), (26, 38), (22, 25)), ICE_DARK, hi=False)   # face in shadow
+    c.stamp(25, 24, [".EEEE", "EEWWE", ".EEE."], {"E": "#58d0ff", "W": "#f0ffff"})
+    c.stamp(37, 23, ["EEE", "EWE", ".E."], {"E": "#58d0ff", "W": "#f0ffff"})
+    fur = c.rect(8, 41, 48, 46)
+    for i in range(9):
+        fur |= c.ell(9 + i * 4.8, 43, 3.2, 3.2)
+    c.part(fur, WHITE, fur=True)                                                                   # fur collar
+    c.part(c.poly((28, 47), (31, 51), (28, 55), (25, 51)), GEM)
+    c.part(c.ell(55, 46, 4.5, 4), WHITE)                                                           # gloved hand
+    return c
+
+
+# ------------------------------------------------------------------ VOLT: a spiky-haired boxer, goggles pushed up
+JACKET = ["#c090f8", "#9058e0", "#5e2ca4", "#36166c", "#14062e"]
+YEL = ["#fffbd0", "#ffe65a", "#e0a000", "#9a5a10", "#3a1a14"]
+GLOVE = ["#ffb0a0", "#ff6a6a", "#c82a3a", "#801438", "#30041a"]
+HAIR = ["#fffbd0", "#ffe27a", "#f0a800", "#a8601a", "#3a1a14"]
+LENS = ["#4a3aa0", "#2a1a68", "#1a1048", "#0e0830", "#06021a"]
 
 
 def volt():
-    s = Sprite()
-    s.line((3, 24), (7, 18), "#ffe65a"); s.line((7, 18), (4, 12), "#ffe65a"); s.line((4, 12), (9, 6), "#ffe65a")
-    s.line((45, 26), (41, 20), "#ffe65a"); s.line((41, 20), (45, 14), "#ffe65a")
-    s.part(R(6, 38, 41, 47) | E(24, 47, 19, 9), JACKET)
-    s.part(P((14, 37), (24, 43), (34, 37), (37, 41), (24, 47), (11, 41)), YEL)                       # collar
-    s.part(P((26, 40), (21, 45), (25, 45), (22, 49), (29, 43), (25, 43)), ["#fffbd0", "#ffe65a", "#e0a000", "#9a6a00", "#3a2200"], outline=False)
-    s.part(E(5, 41, 5, 5), RED); s.part(R(1, 44, 9, 47), YEL)                                         # low glove
-    s.part(E(43, 28, 5, 5), RED); s.part(R(39, 31, 47, 34), YEL)                                      # raised glove
-    s.part(P((12, 22), (5, 12), (12, 14), (9, 3), (18, 10), (20, 0), (26, 8), (33, 1), (33, 10), (43, 4), (36, 15), (43, 22)), HAIR)  # spiky hair
-    s.part(R(21, 31, 26, 38), SKIN)
-    s.part(E(24, 24, 11, 12), SKIN)
-    s.part(R(11, 12, 36, 17), ["#7a6ad8", "#4a3aa0", "#2a1a68", "#14083a", "#06021a"])                 # goggles pushed up
-    for cx in (17, 31):
-        s.part(E(cx, 14.5, 4.5, 2.6), GEM)
-    s.mstamp(14, 21, ["oooooo.", "oEWEEEo", ".ooEEo."], {"o": INK, "E": "#38b0ff", "W": "#e0fcff"})  # eyes
-    s.mstamp(14, 19, ["...ooo", "oooo.."], {"o": "#7a4a14"})                                         # brows
-    s.line((24, 26), (24, 29), "#a8643a", native=True)
-    s.line((18, 31), (30, 31), "#7a2a1a"); s.line((18, 31), (17, 29), "#7a2a1a"); s.line((30, 31), (31, 29), "#7a2a1a")
-    s.dots([(20, 32), (22, 32), (24, 32), (26, 32), (28, 32)], "#ffffff")                            # grin
-    return s.done()
+    c = Cv(64, 64)
+    bolt(c, [(4, 34), (9, 28), (5, 23), (10, 16)], "#ffe65a")
+    bolt(c, [(60, 22), (56, 16), (61, 11), (57, 4)], "#ffe65a")
+    torso(c, JACKET)
+    c.part(c.poly((16, 42), (30, 48), (44, 41), (48, 46), (30, 54), (12, 47)), YEL)                 # collar
+    c.part(c.poly((40, 13), (36, 2), (31, 8), (26, 0), (22, 8), (11, 2), (15, 10), (1, 9), (11, 16), (3, 23),
+                  (17, 22)), HAIR, fur=True)                                                           # hair
+    c.part(c.rect(26, 36, 32, 42), SKIN)                                                            # neck
+    c.part(c.ell(30, 26, 12, 13) | c.poly((38, 30), (45, 27), (43, 36), (36, 38)), SKIN)
+    c.part(c.ell(19, 27, 3, 4), SKIN)                                                              # ear
+    c.part(c.ell(28, 13, 12, 5) | c.poly((17, 14), (14, 7), (22, 10), (24, 4), (30, 9), (36, 3), (38, 10)), HAIR, fur=True)
+    c.part(c.poly((18, 14), (43, 12), (43, 17), (18, 19)), LENS)                                     # goggle strap
+    c.part(c.ell(28, 15, 4, 3), GEM); c.part(c.ell(38, 14.5, 3, 2.6), GEM)
+    c.stamp(23, 21, ["oooooo", "oEWEEo", ".oEEo."], {"o": "#341428", "E": "#38b0ff", "W": "#e0fcff"})
+    c.stamp(36, 21, ["oooo", "oWEo", ".oo."], {"o": "#341428", "E": "#38b0ff", "W": "#e0fcff"})
+    c.line((22, 19), (28, 19), "#a8601a"); c.line((36, 19), (40, 18), "#a8601a")
+    c.line((41, 25), (42, 28), "#8e4a48")                                                          # nose
+    c.line((29, 32), (40, 31), "#5a1a2a"); c.line((29, 32), (28, 30), "#5a1a2a")
+    c.dots([(31, 33), (33, 33), (35, 33), (37, 32)], "#ffffff")                                     # grin
+    c.part(c.ell(54, 44, 8, 7), GLOVE)                                                             # raised glove
+    c.part(c.rect(48, 50, 60, 55), YEL)
+    bolt(c, [(52, 41), (55, 44), (53, 46), (57, 49)], "#fffbd0")
+    return c
 
 
-VIOLET = ["#9a78d0", "#6a4aa0", "#40286a", "#221440", "#0a0618"]
-BLACK = ["#1c1030", "#120a22", "#0a0614", "#05030a", "#010004"]
+# ------------------------------------------------------------------ SHADE: a hooded shadow with a dagger
+VIOLET = ["#a888e0", "#7454b0", "#482c7a", "#281648", "#0c0620"]
+BLACK = ["#2a1c44", "#1a1030", "#0e081e", "#06030e", "#020006"]
 SILVER = ["#ffffff", "#e0d8f8", "#a89cd0", "#6a5c98", "#1a1030"]
+AMETH = ["#ffe8ff", "#e090ff", "#a040d8", "#5a1a98", "#1a0638"]
 
 
 def shade():
-    s = Sprite()
-    for sx in (1, -1):
-        xs = lambda v: 24 + sx * (v - 24)
-        s.part(P((xs(1), 2), (xs(6), 5), (xs(33), 40), (xs(29), 43)), SILVER)                        # crossed blades
-    s.part(P((3, 47), (6, 40), (12, 36), (36, 36), (42, 40), (45, 47)), VIOLET)
-    s.line((12, 42), (24, 47), "#d070ff"); s.line((24, 47), (36, 42), "#d070ff")
-    s.part(P((24, 0), (33, 8), (39, 21), (42, 39), (33, 45), (15, 45), (6, 39), (9, 21), (15, 8)), VIOLET)  # hood
-    s.part(P((24, 12), (32, 20), (33, 32), (24, 40), (15, 32), (16, 20)), BLACK)
-    s.part(P((15, 26), (33, 26), (30, 37), (24, 42), (18, 37)), ["#322a50", "#221a3a", "#140e26", "#0a0616", "#020106"])
-    s.mstamp(16, 21, BLADE_EYE, {"o": INK, "E": "#ff2ad0", "W": "#ffe0f8"})
-    s.part(P((24, 3), (26, 8), (24, 13), (22, 8)), ["#ffe8ff", "#e090ff", "#a040d8", "#5a1a98", "#1a0638"])
-    return s.done()
+    c = Cv(64, 64)
+    c.part(c.poly((50, 34), (59, 8), (61, 10), (55, 36)), SILVER)                                   # dagger blade
+    torso(c, VIOLET)
+    bolt(c, [(14, 52), (30, 60), (46, 50)], "#d070ff")
+    c.part(c.poly((24, 2), (36, 6), (46, 18), (48, 36), (42, 44), (14, 44), (8, 37), (1, 31), (8, 28), (1, 21),
+                  (10, 19), (14, 8)), VIOLET, fur=True)                                               # tattered hood
+    c.part(c.poly((29, 13), (42, 17), (45, 31), (37, 40), (26, 38), (22, 25)), BLACK, hi=False)
+    c.part(c.poly((24, 30), (45, 28), (40, 40), (28, 40)), ["#322a50", "#221a3a", "#140e26", "#0a0616", "#020106"], hi=False)
+    c.stamp(25, 23, [".EEEE", "EEWWE", ".EEE."], {"E": "#ff2ad0", "W": "#ffe0f8"})
+    c.stamp(37, 22, ["EEE", "EWE", ".E."], {"E": "#ff2ad0", "W": "#ffe0f8"})
+    c.part(c.poly((22, 2), (25, 8), (22, 13), (19, 8)), AMETH)
+    c.part(c.rect(50, 34, 57, 37), GOLD)                                                            # guard
+    c.part(c.ell(54, 44, 6, 5.5), BLACK)                                                           # gloved fist
+    return c
 
 
-STONE = ["#e0d4b0", "#b8a888", "#7a6c50", "#463c2c", "#16100a"]
-MOSS = ["#d0f090", "#90c850", "#5a9a30", "#2a5a18", "#0c240a"]
-CRYS = ["#f0ffc0", "#c0f060", "#78c020", "#3a8a10", "#0c2a04"]
+# ------------------------------------------------------------------ TITAN: a mossy stone golem
+STONE = ["#ece0bc", "#c0b090", "#827458", "#4c3e3a", "#1a1020"]
+STONE_D = ["#b0a07e", "#857658", "#58483c", "#342630", "#140a18"]
+MOSS = ["#d8f8a0", "#94d054", "#5a9a30", "#2a5a2a", "#0c2418"]
+CRYS = ["#f4ffc8", "#c0f060", "#78c020", "#3a8a20", "#0c2a14"]
 
 
 def titan():
-    s = Sprite()
-    both(s, P((1, 47), (0, 36), (6, 31), (14, 34), (17, 40), (16, 47)) | E(8, 40, 8, 7), STONE)   # boulder shoulders
-    both(s, P((4, 33), (4, 23), (9, 31)) | P((12, 33), (14, 25), (16, 34)), CRYS)
-    s.part(R(14, 37, 33, 47), ["#c8bc98", "#9a8c6c", "#665a40", "#3a3020", "#100c06"])              # chest block
-    s.part(P((24, 39), (28, 43), (24, 47), (20, 43)), CRYS)
-    s.part(P((10, 19), (13, 10), (35, 10), (38, 19), (37, 31), (31, 36), (17, 36), (11, 31)), STONE)  # head
-    s.part(P((15, 9), (18, 3), (30, 3), (33, 9), (29, 13), (19, 13)), MOSS)                           # mossy crown
-    for x in (18, 24, 30):
-        s.part(P((x - 2, 4), (x, 0), (x + 2, 4)), CRYS)
-    s.part(R(10, 21, 37, 24), ["#7a6c50", "#5a4e38", "#3a3020", "#241c10", "#0a0804"])              # heavy brow
-    s.mstamp(13, 23, [".ooooo.", "oEWEEEo", "..oEEo."], {"o": INK, "E": "#a8ff3a", "W": "#f4ffc0"})
-    s.part(P((13, 29), (34, 29), (31, 36), (17, 36)), ["#9a8c6c", "#7a6c50", "#4a3e2c", "#2a2014", "#0a0804"])  # jaw
-    s.line((17, 31), (30, 31), "#0a0804")
-    both(s, P((17, 32), (16, 27), (19, 31)), ["#fff", "#f0f0f0", "#c8c8c8", "#8a8a8a", "#2a2a2a"])      # tusks
-    s.line((24, 11), (22, 16), "#8aff2a", native=True); s.line((22, 16), (25, 21), "#8aff2a", native=True)
-    s.line((33, 26), (30, 29), "#8aff2a", native=True)
-    return s.done()
+    c = Cv(64, 64)
+    torso(c, STONE_D)
+    c.part(c.poly((32, 50), (37, 56), (32, 63), (27, 56)), CRYS)
+    c.part(c.ell(11, 46, 13, 10), STONE)
+    c.part(c.poly((2, 40), (3, 28), (8, 38)) | c.poly((9, 38), (12, 30), (15, 38)), CRYS)
+    c.part(c.ell(53, 48, 12, 9), STONE)
+    c.part(c.poly((15, 14), (19, 6), (43, 6), (49, 14), (49, 32), (41, 41), (21, 41), (15, 32)), STONE)   # head
+    c.part(c.poly((17, 9), (21, 2), (41, 2), (46, 9), (39, 12), (23, 12)), MOSS, fur=True)
+    for x in (23, 30, 37):
+        c.part(c.poly((x - 2, 4), (x, -1), (x + 2, 4)), CRYS)
+    c.part(c.rect(16, 17, 49, 20), STONE_D, hi=False)                                              # heavy brow
+    c.stamp(24, 21, ["oooooo", "oEWWEo", ".oEEo."], {"o": "#1a1020", "E": "#a8ff3a", "W": "#f4ffc0"})
+    c.stamp(40, 21, ["oooo", "oWEo", ".oo."], {"o": "#1a1020", "E": "#a8ff3a", "W": "#f4ffc0"})
+    c.part(c.poly((20, 31), (49, 29), (47, 38), (40, 42), (22, 41)), STONE_D)                       # jaw
+    c.line((24, 34), (46, 32), "#1a1020")
+    c.part(c.poly((26, 34), (25, 28), (29, 33)), WHITE); c.part(c.poly((42, 33), (43, 27), (45, 32)), WHITE)  # tusks
+    bolt(c, [(31, 7), (28, 12), (31, 16)], "#8aff2a")
+    bolt(c, [(17, 26), (19, 30), (17, 33)], "#8aff2a")
+    return c
+
+
+# ------------------------------------------------------------------ IRONPAW: a scarred brown bear with iron claws
+FUR = ["#f8d890", "#d29a52", "#9c5e30", "#623226", "#2e1422"]
+FUR_D = ["#c88a50", "#9a5c32", "#6c3a24", "#46221e", "#22101a"]
+CREAM = ["#fff6dc", "#f0d6a0", "#cca070", "#8c5e48", "#3a1c22"]
+CAPE_R = ["#e47060", "#b23a44", "#7a2240", "#4a1434", "#1e0818"]
+INK_B = "#2e1422"
+EYE_B = {"o": INK_B, "E": "#ffb02a", "W": "#fff6dc", "b": "#5a2a14"}
+
+
+def ironpaw():
+    c = Cv(64, 64)
+    c.part(c.poly((8, 42), (22, 40), (19, 56), (21, 64), (0, 64), (1, 52)), CAPE_R)
+    torso(c, FUR_D, fur=True)
+    c.part(c.poly((20, 46), (44, 44), (50, 55), (50, 64), (15, 64), (15, 55)), IRON)                # chest plate
+    c.line((33, 46), (33, 63), "#454c74")
+    c.dots([(22, 50), (43, 49), (20, 59), (45, 59)], "#ffd450")
+    c.part(c.ell(12, 38, 12, 9) | c.poly((1, 38), (8, 30), (6, 42), (1, 46)), FUR, fur=True)        # shoulder hump
+    c.part(c.ell(52, 48, 10, 7) | c.poly((44, 41), (58, 42), (63, 51), (57, 53), (55, 57), (49, 51)), FUR, fur=True)
+    c.part(c.ell(14, 8, 5.5, 5.5), FUR)                                                             # small round ears
+    c.part(c.ell(14, 9, 2.5, 2.5), PINK, outline=False, hi=False)
+    c.part(c.ell(42, 7, 4.5, 4.5), FUR_D)
+    head = c.ell(28, 23, 19, 16) | c.poly((12, 26), (8, 32), (13, 31), (10, 37), (16, 35), (16, 40), (21, 36)) \
+        | c.poly((44, 36), (40, 44), (34, 38))
+    c.part(head, FUR, fur=True)
+    c.part(c.ell(47, 30, 11, 7.5), CREAM)                                                           # long muzzle
+    c.stamp(52, 23, ["oooooo", "oWWkko", "okkkko", ".oooo."], {"o": INK_B, "k": "#5a3a48", "W": "#a88a98"})
+    c.line((57, 35), (44, 35), INK_B); c.line((44, 35), (42, 33), INK_B)
+    c.dots([(47, 36), (48, 36), (52, 36), (53, 36)], "#fff6dc")
+    c.stamp(24, 15, ["bbbbbbbb", ".bbbbbb.", ".oooooo.", ".oEWWEo.", ".oEEEEo.", "..oooo.."], EYE_B)
+    c.stamp(40, 15, ["bbbbb", "ooooo", "oEWEo", ".ooo."], EYE_B)
+    for k in range(3):                                                                            # claw scars
+        c.line((16 + k * 3, 9 + k), (17 + k * 3, 21 + k), "#ff7060")
+    c.part(c.poly((47, 52), (60, 50), (63, 64), (46, 64)), IRON)                                    # gauntlet
+    c.part(c.ell(55, 52, 7, 6), FUR)                                                                # raised fist
+    claws(c, [((51, 47), (48, 38)), ((55, 46), (55, 36)), ((59, 47), (62, 39))])
+    return c
+
+
+# ------------------------------------------------------------------ MOONFANG: a silver lone wolf, moon scarf
+FUR_W = ["#ffffff", "#d4dcee", "#96a2c0", "#565c80", "#1c1838"]
+MUZ_W = ["#ffffff", "#f6f8ff", "#d0d8ec", "#9aa2c4", "#1c1838"]
+SCARF = ["#9ab4ff", "#5a7ae0", "#3a4cb0", "#222870", "#0c0a34"]
+NAVY = ["#56628a", "#3a4468", "#262c4a", "#161834", "#08061a"]
+MOON = ["#ffffff", "#fff8d0", "#f0d880", "#b89a50", "#3a2a20"]
+
+
+def moonfang():
+    c = Cv(64, 64)
+    c.part(c.poly((18, 40), (3, 33), (7, 40), (0, 46), (10, 45), (4, 53), (20, 46)), SCARF, fur=True)   # scarf tail
+    torso(c, NAVY)
+    c.part(c.ell(30, 44, 18, 5.5), SCARF)                                                          # scarf wrap
+    c.part(c.ell(36, 45, 3.5, 3.5), MOON)
+    c.part(c.ell(37.5, 44, 2.5, 2.5), SCARF, outline=False, hi=False)
+    c.part(c.poly((37, 16), (44, 0), (48, 18)), FUR_W)                                              # far ear
+    c.part(c.poly((40, 14), (44, 5), (45, 15)), NAVY, outline=False, hi=False)
+    c.part(c.poly((14, 18), (18, 0), (30, 11)), FUR_W)                                              # near ear
+    c.part(c.poly((18, 14), (19, 5), (26, 11)), NAVY, outline=False, hi=False)
+    head = c.ell(28, 24, 15, 13) | c.poly((14, 22), (7, 29), (13, 30), (9, 36), (17, 34), (17, 41), (24, 37))
+    c.part(head, FUR_W, fur=True)
+    c.part(c.poly((33, 22), (54, 26), (57, 30), (53, 35), (36, 37)), MUZ_W)                          # long snout
+    c.stamp(53, 25, ["oooo", "oWko", ".oo."], {"o": "#1c1838", "k": "#3a3858", "W": "#8a8aa8"})
+    c.line((55, 34), (40, 36), "#1c1838")
+    c.dots([(43, 37), (49, 36)], "#ffffff")
+    c.stamp(24, 19, ["oooooo", "oEWEEo", ".oooo."], {"o": "#1c1838", "E": "#46c8ff", "W": "#e8faff"})
+    c.stamp(37, 19, ["oooo", "oWEo", ".oo."], {"o": "#1c1838", "E": "#46c8ff", "W": "#e8faff"})
+    c.line((23, 17), (30, 18), "#565c80"); c.line((36, 17), (41, 17), "#565c80")
+    for x in (20, 23, 26):                                                                         # fur stripes
+        c.line((x, 30), (x - 2, 34), "#96a2c0")
+    return c
+
+
+# ------------------------------------------------------------------ NIGHTOWL: a scholar owl in round gold glasses
+PLUM = ["#f0dcc0", "#c0a080", "#86684e", "#4e3a3a", "#1e1220"]
+WING = ["#8a9ae8", "#5a6ac0", "#36428e", "#1e2258", "#0a0a2a"]
+FACE = ["#fffbe8", "#f4e8d0", "#d4bc9c", "#a08878", "#2e1a20"]
+BEAK = ["#fff0a0", "#ffc048", "#e08a20", "#a0502a", "#3a1414"]
+
+
+def nightowl():
+    c = Cv(64, 64)
+    torso(c, PLUM, fur=True)
+    c.part(c.ell(30, 52, 12, 10), FACE, fur=True)                                                  # chest feathers
+    for x, y in ((25, 48), (31, 50), (37, 48), (28, 55), (34, 56)):
+        c.stamp(x, y, ["o.o", ".o."], {"o": "#a08878"})
+    c.part(c.poly((42, 40), (52, 36), (60, 44), (63, 64), (40, 64)), WING, fur=True)                 # folded wing
+    for x in (48, 53, 58):
+        c.line((x - 4, 44), (x, 63), "#1e2258")
+    c.part(c.poly((12, 14), (8, 0), (20, 9)), PLUM, fur=True)                                       # ear tufts
+    c.part(c.poly((38, 9), (47, 0), (46, 13)), PLUM, fur=True)
+    c.part(c.ell(29, 24, 19, 16), PLUM, fur=True)
+    c.part(c.ell(33, 26, 14, 12), FACE)                                                            # facial disc
+    c.part(c.ell(27, 23, 6.5, 6.5), GOLD)                                                          # glasses
+    c.part(c.ell(41, 23, 5, 5.5), GOLD)
+    c.part(c.ell(27, 23, 4.5, 4.5), ["#ffffff", "#fff6e0", "#f0e0c0", "#c8a880", "#2e1a20"], outline=False, hi=False)
+    c.part(c.ell(41, 23, 3.2, 3.8), ["#ffffff", "#fff6e0", "#f0e0c0", "#c8a880", "#2e1a20"], outline=False, hi=False)
+    c.line((33, 22), (36, 22), "#e09a28")
+    c.stamp(25, 21, [".EE.", "EkkE", "EkWE", ".EE."], {"E": "#ffb02a", "k": "#1e1220", "W": "#ffffff"})
+    c.stamp(40, 21, ["EE", "kk", "EE"], {"E": "#ffb02a", "k": "#1e1220"})
+    c.part(c.poly((33, 29), (39, 29), (36, 36)), BEAK)
+    c.line((20, 16), (25, 18), "#4e3a3a"); c.line((40, 17), (44, 16), "#4e3a3a")                   # brows
+    return c
+
+
+# ------------------------------------------------------------------ OLDSHELL: an old turtle monk in a straw hat
+TURTLE = ["#d0f4a0", "#96cc6a", "#5c9a46", "#2e5a3a", "#0c2420"]
+SHELL = ["#e0b870", "#b08448", "#7a5430", "#46302a", "#1a0c14"]
+ROBE = ["#a08c62", "#766444", "#50422e", "#302428", "#120a14"]
+STRAW = ["#fff4c0", "#f2d686", "#c89c48", "#8a6230", "#3a2018"]
+
+
+def oldshell():
+    c = Cv(64, 64)
+    c.part(c.ell(11, 48, 13, 16), SHELL)                                                           # shell on the back
+    for p in ((5, 40), (13, 37), (4, 52), (13, 50), (9, 60)):
+        c.stamp(p[0], p[1], [".oo.", "o..o", ".oo."], {"o": "#46302a"})
+    torso(c, ROBE)
+    c.part(c.poly((22, 42), (32, 52), (40, 42), (44, 46), (32, 58), (18, 46)), ["#e0d4a8", "#b8a87c", "#857454", "#4e3e30", "#1a1014"])
+    c.part(c.ell(30, 28, 13, 12) | c.poly((36, 26), (49, 28), (47, 35), (36, 37)), TURTLE)           # head with beak
+    c.line((48, 32), (40, 33), "#2e5a3a")
+    c.stamp(24, 25, ["oooo", "oEEo"], {"o": "#0c2420", "E": "#2a1a10"})                          # sleepy wise eyes
+    c.stamp(38, 25, ["ooo", "oEo"], {"o": "#0c2420", "E": "#2a1a10"})
+    c.part(c.poly((21, 20), (30, 20), (28, 22), (19, 23)), WHITE)                                   # bushy brows
+    c.part(c.poly((36, 20), (43, 19), (42, 22), (36, 22)), WHITE)
+    c.part(c.poly((28, 35), (47, 35), (42, 44), (34, 56), (30, 47), (23, 52), (25, 41)), WHITE, fur=True)  # long beard
+    c.part(c.poly((1, 14), (28, 0), (60, 10), (52, 15), (8, 17)), STRAW)                            # straw hat
+    for x in (12, 20, 28, 36, 44):
+        c.line((x, 15 - abs(x - 28) // 6), (28, 1), "#c89c48")
+    c.line((8, 16), (52, 14), "#8a6230")
+    return c
+
+
+# ------------------------------------------------------------------ LILYHOP: a ronin frog with a lily-pad hat
+FROG = ["#d0ffa0", "#8ae060", "#4aa840", "#206a3a", "#0a2a1c"]
+PAD = ["#b8f878", "#62cc4c", "#3a9a38", "#1a6a2e", "#082a18"]
+TEAL = ["#6abac0", "#3a8a92", "#22606e", "#0e3a4a", "#041820"]
+BELLY = ["#fcffd8", "#ecf6b0", "#bcd880", "#86a050", "#2a3a18"]
+
+
+def lilyhop():
+    c = Cv(64, 64)
+    c.part(c.poly((2, 28), (5, 26), (18, 46), (15, 48)), ["#4a3a5a", "#30243e", "#1e1428", "#100a18", "#04020a"])  # sheath
+    c.part(c.rect(3, 22, 7, 29), RED)                                                              # katana hilt
+    for y in (23, 25, 27):
+        c.line((3, y), (7, y + 1), "#2c0a1e")
+    c.part(c.rect(2, 29, 9, 31), GOLD)
+    torso(c, TEAL)
+    c.part(c.poly((22, 40), (32, 54), (42, 40), (46, 44), (32, 62), (18, 44)), BELLY)                 # V collar
+    c.part(c.ell(31, 31, 18, 11), FROG)                                                            # wide head
+    c.part(c.ell(24, 19, 7.5, 7.5), FROG)                                                          # bulging eyes
+    c.part(c.ell(40, 18, 6, 6.5), FROG)
+    c.part(c.ell(25, 20, 5, 5), ["#fffbd0", "#ffe680", "#f0c040", "#a07020", "#2a1a10"], outline=False, hi=False)
+    c.part(c.ell(40.5, 19, 3.6, 4), ["#fffbd0", "#ffe680", "#f0c040", "#a07020", "#2a1a10"], outline=False, hi=False)
+    c.stamp(22, 20, ["kkkkkk"], {"k": "#0a2a1c"}); c.stamp(38, 19, ["kkkk"], {"k": "#0a2a1c"})      # bar pupils
+    c.dots([(23, 18), (39, 17)], "#ffffff")
+    c.line((16, 35), (30, 38), "#0a2a1c"); c.line((30, 38), (48, 33), "#0a2a1c")                    # wide grin
+    c.dots([(44, 28), (46, 28)], "#0a2a1c")                                                       # nostrils
+    c.part(c.ell(19, 34, 2.5, 1.5), PINK, outline=False, hi=False)
+    c.part(c.ell(31, 9, 19, 4.5), PAD)                                                             # lily-pad hat
+    c.part(c.poly((31, 9), (22, 4), (26, 4)), PAD, outline=False)
+    c.line((31, 9), (19, 9), "#1a6a2e"); c.line((31, 9), (44, 7), "#1a6a2e")
+    c.part(c.poly((34, 2), (37, -2), (40, 2), (37, 5)), PINK)                                       # little flower
+    return c
+
+
+# ------------------------------------------------------------------ MASKCAT: a masked cat burglar with a stolen gem
+CAT = ["#ffffff", "#f8f4fc", "#dcd0ec", "#a898c4", "#3a2a4a"]
+MASK = ["#d080f8", "#9a46d8", "#6a22a8", "#3a0a68", "#14022c"]
+CAPE = ["#b070e8", "#7a3ab0", "#521a84", "#2a0a50", "#10021c"]
+
+
+def maskcat():
+    c = Cv(64, 64)
+    c.part(c.poly((16, 40), (1, 35), (4, 46), (0, 54), (6, 64), (20, 64)), CAPE, fur=True)
+    torso(c, CAPE)
+    c.part(c.ell(30, 44, 4, 3), GOLD)                                                              # cape clasp
+    c.part(c.poly((37, 16), (46, 1), (48, 19)), CAT)                                                # far ear
+    c.part(c.poly((40, 14), (45, 6), (46, 15)), PINK, outline=False, hi=False)
+    c.part(c.poly((14, 18), (16, 1), (28, 10)), CAT)                                                # near ear
+    c.part(c.poly((17, 14), (17, 6), (24, 10)), PINK, outline=False, hi=False)
+    c.part(c.ell(30, 25, 15, 13) | c.poly((15, 26), (9, 31), (15, 32), (12, 37), (20, 35), (22, 39)), CAT, fur=True)
+    c.part(c.ell(42, 31, 6, 4.5), CAT)                                                             # muzzle
+    c.part(c.poly((16, 19), (46, 16), (48, 22), (42, 25), (34, 22), (24, 26), (17, 24)), MASK)        # domino mask
+    c.stamp(22, 20, ["oooooo", "oEEkEo", ".oEEo."], {"o": "#14022c", "E": "#a8ff3a", "k": "#14022c"})
+    c.stamp(38, 19, ["oooo", "oEko", ".oo."], {"o": "#14022c", "E": "#a8ff3a", "k": "#14022c"})
+    c.stamp(44, 27, ["ooo", ".o."], {"o": "#ff7aa8"})                                               # nose
+    c.stamp(41, 31, ["o..o..o", ".oo.oo."], {"o": "#3a2a4a"})                                      # w mouth
+    c.line((47, 30), (57, 28), "#a898c4"); c.line((47, 32), (57, 33), "#a898c4")                     # whiskers
+    c.part(c.ell(54, 52, 6, 5), CAT)                                                               # paw
+    c.part(c.poly((50, 42), (54, 37), (58, 42), (54, 48)), GEM)                                     # stolen gem
+    return c
 
 
 HEROES = {"bastion": bastion, "blaze": blaze, "frost": frost, "volt": volt, "shade": shade, "titan": titan}
-
-
 ANIMALS = {"ironpaw": ironpaw, "moonfang": moonfang, "nightowl": nightowl, "oldshell": oldshell, "lilyhop": lilyhop,
            "maskcat": maskcat}
 FIGHTERS = {**HEROES, **ANIMALS}
@@ -417,19 +462,20 @@ def dark_variant(im):
     return Image.fromarray(np.dstack([out, alpha]).astype(np.uint8), "RGBA")
 
 
+
 def main(only=None):
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "chars")
     os.makedirs(out, exist_ok=True)
-    sheet = Image.new("RGB", (4 * N * UP // 2, 3 * N * UP // 2), (18, 14, 34))
+    cell = 64 * 4
+    sheet = Image.new("RGB", (4 * cell, 3 * cell), (18, 14, 34))
     for i, (cid, fn) in enumerate(FIGHTERS.items()):
         if only and cid not in only:
             continue
-        im = fn()
+        im = fn().image(UP)
         im.save(os.path.join(out, cid + ".png"))
-        im.crop((16 * UP, 0, 80 * UP, 64 * UP)).resize((128, 128), Image.NEAREST).save(os.path.join(out, cid + "_s.png"))
         dark_variant(im).save(os.path.join(out, cid + "_dark.png"))
-        half = im.resize((N * UP // 2, N * UP // 2), Image.NEAREST)
-        sheet.paste(half, ((i % 4) * N * UP // 2, (i // 4) * N * UP // 2), half)
+        half = im.resize((cell, cell), Image.NEAREST)
+        sheet.paste(half, ((i % 4) * cell, (i // 4) * cell), half)
     sheet.save(os.path.join(os.environ.get("SHEET_DIR", "/tmp"), "fighters_sheet.png"))
     skill_icons()
     print("fighters written to", out)
