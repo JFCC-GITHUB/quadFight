@@ -9,6 +9,7 @@ const CharSelectScreen := preload("res://scripts/char_select.gd")
 const IntroScreen := preload("res://scripts/intro.gd")
 const BonusScreen := preload("res://scripts/bonus.gd")
 const SummaryScreen := preload("res://scripts/summary.gd")
+const Skill := preload("res://scripts/skill.gd")
 const Characters := preload("res://scripts/characters.gd")
 const CpuPlayer := preload("res://scripts/cpu_player.gd")
 
@@ -75,7 +76,7 @@ func show_char_select(level: int, mode: String, step: int = 0) -> void:
 func start_run(mode: String, level: int) -> void:
 	var player: String = Settings.vs_char
 	run = {"mode": mode, "player": player, "level": level, "base": level, "round": 0, "order": [], "cpu": "", "credits": START_CREDITS,
-		"log": [], "won": false, "used": 0}
+		"log": [], "won": false, "used": 0, "sk": Skill.empty()}
 	if mode == "tournament":
 		var ids: Array = []
 		for d in Characters.LIST:
