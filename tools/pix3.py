@@ -1,5 +1,5 @@
-"""Pixel kit v3: native-resolution canvas, contour-following shading (bands hugging the lit / shadow edge, like a
-hand-pixeled sprite), 1px outline tinted per part, ASCII stamps for faces and details. Coordinates are real pixels."""
+"""Pixel kit v3: native-resolution canvas, contour-following shading (bands hugging the lit / shadow edge, jagged into
+fur tufts), hue-shifted ramps, selective outlines, ASCII stamps for faces and details. Coordinates are real pixels."""
 import numpy as np
 from PIL import Image, ImageDraw
 
@@ -37,25 +37,41 @@ class Cv:
     def rect(self, x0, y0, x1, y1):
         return (self.xx >= x0) & (self.xx <= x1) & (self.yy >= y0) & (self.yy <= y1)
 
-    def part(self, m, ramp, outline=True, dither=True, hi=True):
-        """ramp = [highlight, light, mid, dark, deep]. Light comes from the upper left."""
+    def part(self, m, ramp, outline=True, fur=False, hi=True):
+        """ramp = [highlight, light, mid, dark, deep], hue-shifted (warm lights, cool/purple shadows). Light from the
+        upper left. Shading bands hug the edges; with fur=True their inner edge is jagged (pointed tufts).
+        Selective outline: the lit (top) side gets the dark tone, the rest the deep tone."""
         col = [rgb(c) for c in ramp]
         if outline:
-            g = m.copy()
-            g |= shift(m, 1, 0) | shift(m, -1, 0) | shift(m, 0, 1) | shift(m, 0, -1)
-            self.px[g & ~m] = (*col[4], 255)
+            g = m | shift(m, 1, 0) | shift(m, -1, 0) | shift(m, 0, 1) | shift(m, 0, -1)
+            o = g & ~m
+            self.px[o] = (*col[4], 255)
+            self.px[o & shift(m, 0, -1) & (self.yy < self.cy(m))] = (*col[3], 255)
+        dl = self.depth(m, lambda k: shift(m, 0, k) & shift(m, k, k))
+        ds = self.depth(m, lambda k: shift(m, 0, -k) & shift(m, -k, -k))
+        saw = np.array([0, 1, 2, 1])
+        tl = saw[self.xx % 4] if fur else 0
+        ts = saw[(self.xx + 2) % 4] if fur else 0
         self.px[m] = (*col[2], 255)
-        lit = lambda k: m & ~shift(m, k, k)          # band of thickness k on the upper-left edge
-        sha = lambda k: m & ~shift(m, -k, -k)        # band on the lower-right edge
-        if dither:                                   # checker between mid and dark / light
-            chk = ((self.xx + self.yy) % 2 == 0)
-            self.px[sha(4) & chk] = (*col[3], 255)
-            self.px[lit(4) & chk] = (*col[1], 255)
-        self.px[lit(2)] = (*col[1], 255)
-        self.px[sha(2)] = (*col[3], 255)
+        self.px[m & (dl <= 2 + tl)] = (*col[1], 255)
+        self.px[m & (ds <= 2 + ts)] = (*col[3], 255)
         if hi:
-            self.px[lit(1) & ~shift(m, 0, 1) | (m & ~shift(m, 0, 1))] = (*col[0], 255)
-        self.px[m & ~shift(m, -1, -1) & ~shift(m, 0, -1) & ~shift(m, -1, 0)] = (*col[3], 255)
+            self.px[m & (dl <= 1) & ~shift(m, 0, 1) & (self.xx < self.cx(m) + 2)] = (*col[0], 255)
+
+    @staticmethod
+    def depth(m, inner, K=6):
+        d = np.full(m.shape, 99)
+        for k in range(K, 0, -1):
+            d[m & ~inner(k)] = k
+        return d
+
+    def cx(self, m):
+        xs = np.nonzero(m)[1]
+        return (xs.min() + xs.max()) / 2 if len(xs) else 0
+
+    def cy(self, m):
+        ys = np.nonzero(m)[0]
+        return (ys.min() + ys.max()) / 2 if len(ys) else 0
 
     def stamp(self, x, y, rows, pal):
         for j, row in enumerate(rows):
