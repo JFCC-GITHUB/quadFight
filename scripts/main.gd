@@ -8,6 +8,7 @@ const VsSelectScreen := preload("res://scripts/vs_select.gd")
 const CharSelectScreen := preload("res://scripts/char_select.gd")
 const IntroScreen := preload("res://scripts/intro.gd")
 const BonusScreen := preload("res://scripts/bonus.gd")
+const SummaryScreen := preload("res://scripts/summary.gd")
 const Characters := preload("res://scripts/characters.gd")
 const CpuPlayer := preload("res://scripts/cpu_player.gd")
 
@@ -73,7 +74,8 @@ func show_char_select(level: int, mode: String, step: int = 0) -> void:
 ## `level` is the starting CPU level for the ladder, or the difficulty index (0-2) for the tournament.
 func start_run(mode: String, level: int) -> void:
 	var player: String = Settings.vs_char
-	run = {"mode": mode, "player": player, "level": level, "base": level, "round": 0, "order": [], "cpu": "", "credits": START_CREDITS}
+	run = {"mode": mode, "player": player, "level": level, "base": level, "round": 0, "order": [], "cpu": "", "credits": START_CREDITS,
+		"log": [], "won": false, "used": 0}
 	if mode == "tournament":
 		var ids: Array = []
 		for d in Characters.LIST:
@@ -106,7 +108,8 @@ func next_fight() -> void:
 		if run["round"] >= run["order"].size():
 			Settings.tour_clears += 1
 			Settings.save()
-			show_intro(true)
+			run["won"] = true
+			show_summary()
 			return
 		run["cpu"] = run["order"][run["round"]]
 		run["level"] = run["levels"][run["round"]]
@@ -120,6 +123,11 @@ func next_fight() -> void:
 	show_intro()
 
 
+## The run summary: every fight of the tournament, win or lose, plus totals.
+func show_summary() -> void:
+	_swap(SummaryScreen.new())
+
+
 func show_bonus(free: bool = false) -> void:
 	var s := BonusScreen.new()
 	s.free = free
@@ -129,6 +137,7 @@ func show_bonus(free: bool = false) -> void:
 ## Tournament: spend a continue and fight the same opponent again.
 func continue_fight() -> void:
 	run["credits"] -= 1
+	run["used"] += 1
 	show_match()
 
 

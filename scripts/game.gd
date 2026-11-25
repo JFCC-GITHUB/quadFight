@@ -45,6 +45,8 @@ var cpu_char := ""            # the opponent fighter (Main passes it; empty = ra
 var mode := "ladder"           # "ladder" | "tournament"
 var round_no := 1              # tournament: which fight this is, of round_total
 var round_total := 0
+var st := {"sent": 0, "taken": 0, "blocked": 0, "combo": 0, "quads": 0, "specials": 0, "time": 0.0}  # VS fight stats
+var last_fight := {}
 var have: Dictionary = {}      # line-clear sizes collected toward the player's special attack
 var cpu_have: Dictionary = {}
 var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
@@ -357,6 +359,8 @@ func _notification(what: int) -> void:
 
 func _process(delta: float) -> void:
 	time += delta
+	if vs and (state == State.PLAYING or state == State.CLEARING):
+		st["time"] += delta
 	if cont_label != null:
 		cont_time -= delta
 		cont_label.text = str(maxi(ceili(cont_time), 0))
@@ -619,6 +623,9 @@ func _begin_clear(rows: Array) -> void:
 		Color("ffd400") if n == 4 else Color.WHITE)
 	if vs:
 		combo += 1
+		st["combo"] = maxi(st["combo"], combo)
+		if n == 4:
+			st["quads"] += 1
 		_send_attack(_attack_power(n, combo), true, rows)
 		if Characters.add_clear(char_id, have, n):
 			_fire_special(true)
@@ -671,9 +678,11 @@ func _send_attack(power: int, from_player: bool, rows: Array) -> void:
 		cpu.incoming -= cancelled
 	power -= cancelled
 	if cancelled > 0 and from_player:
+		st["blocked"] += cancelled
 		_popup("BLOCKED %d" % cancelled, Style.CYAN)
 	if power <= 0:
 		return
+	st["sent" if from_player else "taken"] += power
 	if from_player:
 		cpu.incoming += power
 		_popup("ATTACK +%d" % power, Color("ff7a4d"))
@@ -715,6 +724,7 @@ func _fire_special(from_player: bool) -> void:
 	special_flash = 1.0
 	Sfx.play("levelup")
 	if from_player:
+		st["specials"] += 1
 		cpu.special_in.append(id)
 	else:
 		special_in.append(id)
@@ -785,6 +795,10 @@ func _vs_end(won: bool) -> void:
 	Sfx.stop_music()
 	Sfx.play("win" if won else "lose")
 	_shake(0.4, 6.0)
+	last_fight = {"foe": cpu_char, "lv": cpu_level, "won": won, "score": score, "lines": lines, "cpu_lines": cpu.lines}
+	last_fight.merge(st)
+	if mode == "tournament":
+		main.run["log"].append(last_fight)
 	if mode == "tournament" and not won and main.run.get("credits", 0) > 0:
 		_continue_prompt()
 		return
@@ -814,7 +828,7 @@ func _vs_result(won: bool) -> void:
 	var rec: Array = Settings.record(cpu_level)
 	var last := tour and round_no >= round_total
 	var has_next := won and (tour or cpu_level < CpuPlayer.MAX_LEVEL)
-	var card_h := 240.0 + 102.0 + (92.0 if has_next else 0.0) + 70.0 + 36.0
+	var card_h := 372.0 + 102.0 + (92.0 if has_next else 0.0) + 70.0 + 36.0
 	var c := _open_overlay(Rect2(50, (960.0 - card_h) * 0.5 - 40.0, 440, card_h))
 	var title := "YOU WIN!" if won else "YOU LOSE"
 	if tour:
@@ -824,17 +838,24 @@ func _vs_result(won: bool) -> void:
 	var foe: String = Characters.def(cpu_char)["name"]
 	UI.label(c, "vs %s  (CPU Lv %d  %s)" % [foe, cpu_level, CpuPlayer.NAMES[cpu_level - 1]], Rect2(0, 100, 440, 34), 18,
 		Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
-	UI.label(c, "YOU  %d lines      CPU  %d lines" % [lines, cpu.lines], Rect2(0, 140, 440, 36), 22, Style.TEXT)
+	var cells := [["SCORE", str(score)], ["LINES  YOU / CPU", "%d / %d" % [lines, cpu.lines]],
+		["ATTACK SENT", str(st["sent"])], ["ATTACK TAKEN", str(st["taken"])],
+		["BEST COMBO", str(st["combo"])], ["SPECIALS", str(st["specials"])],
+		["QUADS", str(st["quads"])], ["TIME", "%d:%02d" % [int(st["time"]) / 60, int(st["time"]) % 60]]]
+	for i in cells.size():
+		var cx := 24.0 + (i % 2) * 204.0
+		var cy := 142.0 + (i / 2) * 46.0
+		UI.label(c, cells[i][0], Rect2(cx, cy, 190, 18), 12, Style.MUTED, HORIZONTAL_ALIGNMENT_LEFT, Style.FONT_SEMI)
+		UI.label(c, cells[i][1], Rect2(cx, cy + 14, 190, 30), 24, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT, Style.FONT_BOLD)
 	var info := "Round %d of %d" % [round_no, round_total] if tour else "Record at this level:  %d W  /  %d L" % [rec[0], rec[1]]
-	UI.label(c, info, Rect2(0, 180, 440, 32), 18, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
-	var y := 240.0
+	UI.label(c, info, Rect2(0, 330, 440, 28), 18, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
+	var y := 372.0
 	if tour:
 		if won:
 			var nxt := "FINISH" if last else "NEXT FIGHT"
 			UI.button(c, nxt, Rect2(40, y, 360, 88), func(): main.next_fight(), 30, Style.BTN_PRIMARY, "swords")
 		else:
-			UI.button(c, "TRY AGAIN", Rect2(40, y, 360, 88), func(): main.start_run("tournament", main.run["base"]), 30,
-				Style.BTN_PRIMARY, "retry")
+			UI.button(c, "SUMMARY", Rect2(40, y, 360, 88), func(): main.show_summary(), 30, Style.BTN_PRIMARY, "retry")
 		y += 102.0
 		UI.button(c, "MENU", Rect2(40, y, 360, 70), func(): main.show_title(), 22, Style.BTN_GLASS, "home")
 		return
