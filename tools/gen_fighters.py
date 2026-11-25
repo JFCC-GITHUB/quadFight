@@ -154,25 +154,29 @@ BELLY = ["#fcffd0", "#ecf6b0", "#bcd880", "#8aa850", "#2a3a10"]
 
 def lilyhop():
     s = Sprite()
-    s.part(P((38, 27), (41, 26), (46, 44), (43, 45)), ["#fff", "#dce4f0", "#a8b4c8", "#6a7488", INK])  # sword behind the shoulder
-    s.part(R(36, 24, 43, 27), GOLD)
+    s.part(P((40, 28), (43, 27), (47, 47), (44, 47)), ["#fff", "#dce4f0", "#a8b4c8", "#6a7488", INK])  # katana blade behind the shoulder
+    s.part(R(39, 16, 44, 27), ["#e86a6a", "#c03a3a", "#8a2028", "#5a1018", "#1a0408"])                 # wrapped hilt
+    for y in (18, 21, 24):
+        s.line((39, y), (44, y), "#fbd0d0")
+    s.part(E(41.5, 28, 5, 2), GOLD)                                                                     # guard
     s.part(R(5, 38, 42, 47) | E(24, 47, 20, 8), TEAL)
     s.line((8, 41), (40, 41), "#ff9ab8")
     s.line((8, 42), (40, 42), "#d0608a")
     s.part(E(24, 38, 9, 7), BELLY)                                                           # throat pouch
-    s.part(E(24, 28, 19, 10), FROG)                                                          # wide head
+    s.part(E(24, 29, 19, 10), FROG)                                                          # wide head
+    s.part(E(24, 14, 17, 5), FROG)                                                           # top of the head under the hat
     for cx in (13, 35):                                                                      # bulging eyes
-        s.part(E(cx, 17, 7, 7), FROG)
-        s.part(E(cx, 17, 4, 4), GOLD)
-        s.stamp(cx - 3, 17, ["oooooo"], {"o": INK})                                           # horizontal pupil
-        s.dots([(cx - 3, 15), (cx - 2, 15)], "#fffbe8")
+        s.part(E(cx, 19, 7, 7), FROG)
+        s.part(E(cx, 19, 4, 4), GOLD)
+        s.stamp(cx - 3, 19, ["oooooo"], {"o": INK})                                           # horizontal pupil
+        s.dots([(cx - 3, 17), (cx - 2, 17)], "#fffbe8")
     s.line((9, 29), (16, 33), "#0a2a10"); s.line((16, 33), (32, 33), "#0a2a10"); s.line((32, 33), (39, 29), "#0a2a10")  # wide smile
     s.line((29, 33), (36, 37), "#c8f060"); s.line((36, 37), (42, 34), "#c8f060")             # blade of grass
     s.dots([(15, 28), (16, 28), (32, 28), (33, 28)], "#206a30")                              # nostrils
-    s.part(E(24, 9, 18, 5), PAD)                                                             # lily-pad hat
-    s.line((24, 9), (10, 7), "#1a6a28"); s.line((24, 9), (38, 7), "#1a6a28")
-    s.part(P((24, 5), (21, 1), (23, 6)) | P((24, 5), (27, 1), (25, 6)), ["#ffe6f0", "#ffb0c8", "#e0608a", "#a03a60", INK])
-    s.dots([(24, 4), (24, 5)], "#fff6a0")
+    s.part(E(24, 6.5, 18, 4.5), PAD)                                                             # lily-pad hat
+    s.line((24, 6.5), (10, 5), "#1a6a28"); s.line((24, 6.5), (38, 5), "#1a6a28")
+    s.part(P((24, 3), (21, 0), (23, 4)) | P((24, 3), (27, 0), (25, 4)), ["#ffe6f0", "#ffb0c8", "#e0608a", "#a03a60", INK])
+    s.dots([(24, 2), (24, 3)], "#fff6a0")
     return s.done()
 
 
@@ -196,9 +200,10 @@ def maskcat():
     both(s, P((9, 20), (8, 2), (19, 10)), CAT)                                                # ears
     both(s, P((11, 17), (11, 7), (16, 11)), PINK, outline=False, rim=False)
     s.part(P((9, 24), (13, 14), (24, 11), (35, 14), (39, 24), (41, 30), (33, 36), (24, 38), (15, 36), (7, 30)), CAT)
-    s.part(P((8, 18), (24, 16), (40, 18), (39, 26), (31, 25), (24, 23), (17, 25), (9, 26)), MASK)  # half mask
+    patch = P((9, 20), (15, 16), (23, 19), (23, 25), (16, 26), (11, 25))
+    s.part(patch | flip(patch) | R(21, 19, 27, 21), MASK)                                    # mask: two eye patches and a bridge
     pal = {"o": INK, "E": "#a8ff3a", "W": "#f4ffc0"}
-    s.mstamp(12, 19, ["oooooo", "oEWEEo", ".oEEo."], pal)
+    s.mstamp(12, 20, ["oooooo", "oEWEEo", ".oEEo."], pal)
     s.stamp(22, 28, ["ooooo", ".ooo."], {"o": "#ff7ab8"})                                     # nose
     s.line((24, 30), (24, 32), "#7a3a68")
     s.line((18, 33), (24, 34), "#7a3a68"); s.line((24, 34), (30, 33), "#7a3a68"); s.line((30, 33), (31, 31), "#7a3a68")  # smirk
@@ -273,12 +278,13 @@ def blaze():
     s.part(P((12, 17), (5, 6), (14, 11), (11, 0), (20, 8), (24, 0), (28, 8), (37, 0), (34, 11), (43, 6), (36, 17)), FLAME)  # flame hair
     s.part(P((16, 15), (14, 7), (21, 12), (24, 5), (27, 12), (34, 7), (32, 15)), ["#fffbe0", "#ffeb90", "#ffb030", "#e06818", "#6a1a08"], outline=False)
     s.part(E(24, 22, 12, 13), HOOD)                                                                 # hood
-    s.part(R(12, 17, 35, 22), SKIN)                                                                 # eye band
-    s.part(P((12, 22), (35, 22), (32, 32), (24, 37), (16, 32)), CRIM)                               # face mask
+    s.part(R(12, 16, 35, 25), SKIN)                                                                 # eye band
+    s.part(P((12, 26), (35, 26), (32, 33), (24, 38), (16, 33)), CRIM)                               # face mask
     s.part(R(11, 11, 36, 15), ["#e86850", "#c8404a", "#8a2030", "#5a1020", "#1a0408"])               # headband
     s.part(R(21, 10, 26, 16), STEEL_PLATE := ["#ffffff", "#e0e8f4", "#9aa8c4", "#5a6a88", "#1a2030"])
     s.dots([(23, 12), (24, 12), (24, 13)], "#ff5a1a")
-    s.mstamp(14, 17, [".ooooo.", "oEWEEEo"], {"o": INK, "E": "#ff3a10", "W": "#fff6c0"})
+    s.mstamp(13, 18, ["..oooooo", ".oEEEEEo", "oEWWEEEo", ".ooEEEo."], {"o": INK, "E": "#ff3a10", "W": "#fff6c0"})
+    s.mstamp(13, 16, ["ooo....", ".ooooo."], {"o": "#3a1008"})                                         # fierce brows
     return s.done()
 
 
@@ -300,12 +306,14 @@ def volt():
     s.part(P((12, 22), (5, 12), (12, 14), (9, 3), (18, 10), (20, 0), (26, 8), (33, 1), (33, 10), (43, 4), (36, 15), (43, 22)), HAIR)  # spiky hair
     s.part(R(21, 31, 26, 38), SKIN)
     s.part(E(24, 24, 11, 12), SKIN)
-    s.part(P((13, 17), (16, 12), (24, 15), (32, 12), (35, 17), (24, 18)), HAIR)                     # fringe
-    s.part(R(12, 18, 35, 25), ["#7a6ad8", "#4a3aa0", "#2a1a68", "#14083a", "#06021a"])                 # goggles
+    s.part(R(11, 12, 36, 17), ["#7a6ad8", "#4a3aa0", "#2a1a68", "#14083a", "#06021a"])                 # goggles pushed up
     for cx in (17, 31):
-        s.part(E(cx, 21.5, 4.5, 3), GEM)
-    s.line((17, 21), (19, 23), "#02121e", native=True)
-    s.line((20, 31), (29, 31), "#7a2a1a"); s.dots([(21, 32), (23, 32), (25, 32), (27, 32)], "#ffffff")  # grin
+        s.part(E(cx, 14.5, 4.5, 2.6), GEM)
+    s.mstamp(14, 21, ["oooooo.", "oEWEEEo", ".ooEEo."], {"o": INK, "E": "#38b0ff", "W": "#e0fcff"})  # eyes
+    s.mstamp(14, 19, ["...ooo", "oooo.."], {"o": "#7a4a14"})                                         # brows
+    s.line((24, 26), (24, 29), "#a8643a", native=True)
+    s.line((18, 31), (30, 31), "#7a2a1a"); s.line((18, 31), (17, 29), "#7a2a1a"); s.line((30, 31), (31, 29), "#7a2a1a")
+    s.dots([(20, 32), (22, 32), (24, 32), (26, 32), (28, 32)], "#ffffff")                            # grin
     return s.done()
 
 
