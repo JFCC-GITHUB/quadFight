@@ -288,6 +288,7 @@ func _lock() -> void:
 		lines += cleared
 		combo += 1
 		on_clear.call(cleared, combo)
+		apply_specials()
 	else:
 		combo = 0
 		apply_incoming()
@@ -295,18 +296,21 @@ func _lock() -> void:
 		_spawn()
 
 
-## Drops pending garbage blocks onto random columns. Overflowing the board loses the game.
-func apply_incoming() -> void:
+## Special attacks land at the next lock, even when that lock clears lines (they cannot be dodged by clearing).
+func apply_specials() -> void:
 	for sid in special_in:
 		var ok := Characters.apply(sid, board)  # first: the lightning picks its side here
 		on_special.call(sid)
 		if not ok:
 			alive = false
-			special_in.clear()
-			return
-
+			break
 	special_in.clear()
-	if incoming <= 0:
+
+
+## Drops pending garbage blocks onto random columns. Overflowing the board loses the game.
+func apply_incoming() -> void:
+	apply_specials()
+	if not alive or incoming <= 0:
 		return
 	var n := incoming
 	incoming = 0
