@@ -4,6 +4,7 @@ extends Control
 const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const Characters := preload("res://scripts/characters.gd")
+const Skill := preload("res://scripts/skill.gd")
 
 var main: Node
 
@@ -70,6 +71,9 @@ func _draw() -> void:
 	var cells := [["SCORE", str(tot["score"])], ["LINES", str(tot["lines"])], ["ATTACK SENT", str(tot["sent"])],
 		["ATTACK TAKEN", str(tot["taken"])], ["BEST COMBO", str(tot["combo"])], ["SPECIALS", str(tot["specials"])],
 		["QUADS", str(tot["quads"])], ["TIME", time_text(tot["time"])]]
+	var run_est := Skill.estimate(run["sk"])
+	Style.text(self, Style.FONT_BOLD, Vector2(0, 806), "YOUR LEVEL  ~  " + Skill.text(run_est), 19, Style.CYAN,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	for i in cells.size():
 		var cx := 40.0 + (i % 2) * 250.0
 		var cy := 664.0 + (i / 2) * 36.0

@@ -5,6 +5,7 @@ extends Control
 const UI := preload("res://scripts/ui.gd")
 const Style := preload("res://scripts/style.gd")
 const Pieces := preload("res://scripts/pieces.gd")
+const Skill := preload("res://scripts/skill.gd")
 const TouchLayout := preload("res://scripts/touch_layout.gd")
 const OptionsScreen := preload("res://scripts/options.gd")
 const CpuPlayer := preload("res://scripts/cpu_player.gd")
@@ -47,6 +48,13 @@ var round_no := 1              # tournament: which fight this is, of round_total
 var round_total := 0
 var st := {"sent": 0, "taken": 0, "blocked": 0, "combo": 0, "quads": 0, "specials": 0, "time": 0.0}  # VS fight stats
 var last_fight := {}
+var sk := {"pieces": 0, "time": 0.0, "keys": 0, "delay": 0.0, "delay_n": 0, "holes": 0}  # play record for the skill estimate
+var play_t := 0.0
+var spawn_t := 0.0
+var got_key := false
+var prev_holes := 0
+var sk_saved := false
+var last_est := -1.0
 var have: Dictionary = {}      # line-clear sizes collected toward the player's special attack
 var cpu_have: Dictionary = {}
 var special_in: Array = []     # special attacks (character ids) waiting to land on the player's board
@@ -359,8 +367,11 @@ func _notification(what: int) -> void:
 
 func _process(delta: float) -> void:
 	time += delta
-	if vs and (state == State.PLAYING or state == State.CLEARING):
-		st["time"] += delta
+	if state == State.PLAYING or state == State.CLEARING:
+		play_t += delta
+		sk["time"] = play_t
+		if vs:
+			st["time"] += delta
 	if cont_label != null:
 		cont_time -= delta
 		cont_label.text = str(maxi(ceili(cont_time), 0))
@@ -491,6 +502,7 @@ func _move(dx: int) -> bool:
 	if _collides(kind, rot, pos + Vector2i(dx, 0)):
 		return false
 	pos.x += dx
+	_key_pressed()
 	Sfx.play("move")
 	_on_piece_moved()
 	return true
@@ -502,12 +514,14 @@ func _rotate(dir: int) -> void:
 		if not _collides(kind, new_rot, pos + k):
 			pos += k
 			rot = new_rot
+			_key_pressed()
 			Sfx.play("rotate")
 			_on_piece_moved()
 			return
 
 
 func _hard_drop() -> void:
+	_key_pressed()
 	var start := pos
 	while not _collides(kind, rot, pos + Vector2i(0, 1)):
 		pos.y += 1
@@ -529,6 +543,7 @@ func _hard_drop() -> void:
 func _hold() -> void:
 	if hold_used:
 		return
+	_key_pressed()
 	var current := kind
 	if hold_kind == -1:
 		hold_kind = current
@@ -567,11 +582,48 @@ func _spawn(forced := -1) -> void:
 	lock_resets = 0
 	if forced < 0:
 		hold_used = false
+	spawn_t = play_t
+	got_key = false
+	var holes := _count_holes()
+	sk["holes"] += maxi(0, holes - prev_holes)
+	prev_holes = holes
 	if _collides(kind, rot, pos):
 		_game_over()
 
 
+## Skill record: the first key of a piece also gives the reaction delay since it appeared.
+func _key_pressed() -> void:
+	sk["keys"] += 1
+	if not got_key:
+		got_key = true
+		sk["delay"] += play_t - spawn_t
+		sk["delay_n"] += 1
+
+
+func _count_holes() -> int:
+	var n := 0
+	for x in COLS:
+		var seen := false
+		for y in ROWS:
+			if board[y][x] != -1:
+				seen = true
+			elif seen:
+				n += 1
+	return n
+
+
+## Hands the finished game's record to the lifetime profile (once) and returns its skill estimate.
+func _finish_record() -> float:
+	if not sk_saved:
+		sk_saved = true
+		Settings.add_profile(sk)
+		if mode == "tournament":
+			Skill.add(main.run["sk"], sk)
+	return Skill.estimate(sk)
+
+
 func _lock(play_sound := true) -> void:
+	sk["pieces"] += 1
 	soft_lock = _held("soft_drop")
 	var topped_out := true
 	for c in Pieces.cells(kind, rot):
@@ -795,6 +847,7 @@ func _vs_end(won: bool) -> void:
 	Sfx.stop_music()
 	Sfx.play("win" if won else "lose")
 	_shake(0.4, 6.0)
+	last_est = _finish_record()
 	last_fight = {"foe": cpu_char, "lv": cpu_level, "won": won, "score": score, "lines": lines, "cpu_lines": cpu.lines}
 	last_fight.merge(st)
 	if mode == "tournament":
@@ -841,7 +894,7 @@ func _vs_result(won: bool) -> void:
 	var cells := [["SCORE", str(score)], ["LINES  YOU / CPU", "%d / %d" % [lines, cpu.lines]],
 		["ATTACK SENT", str(st["sent"])], ["ATTACK TAKEN", str(st["taken"])],
 		["BEST COMBO", str(st["combo"])], ["SPECIALS", str(st["specials"])],
-		["QUADS", str(st["quads"])], ["TIME", "%d:%02d" % [int(st["time"]) / 60, int(st["time"]) % 60]]]
+		["YOUR LEVEL (EST.)", "Lv %d" % roundi(last_est) if last_est >= 0.0 else "-"], ["TIME", "%d:%02d" % [int(st["time"]) / 60, int(st["time"]) % 60]]]
 	for i in cells.size():
 		var cx := 24.0 + (i % 2) * 204.0
 		var cy := 142.0 + (i / 2) * 46.0
@@ -908,6 +961,7 @@ func _game_over() -> void:
 		_vs_end(false)
 		return
 	state = State.OVER
+	last_est = _finish_record()
 	touch_map.clear()
 	Sfx.stop_music()
 	Sfx.play("gameover")
@@ -925,13 +979,14 @@ func _show_over(rank: int) -> void:
 	UI.label(c, "SCORE", Rect2(0, 100, 440, 30), 18, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.caption_font())
 	UI.label(c, str(score), Rect2(0, 126, 440, 76), 60, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
 	UI.label(c, "LINES  %d      LEVEL  %d" % [lines, level], Rect2(0, 206, 440, 36), 22, Style.TEXT)
+	UI.label(c, "SKILL  " + Skill.text(last_est), Rect2(0, 240, 440, 28), 18, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
 	var tag := ""
 	if rank == 1:
 		tag = "NEW BEST!"
 	elif rank > 0:
 		tag = "RANK #%d" % rank
 	if tag != "":
-		UI.label(c, tag, Rect2(0, 248, 440, 46), 30, Style.GOLD, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
+		UI.label(c, tag, Rect2(0, 266, 440, 46), 30, Style.GOLD, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
 	UI.button(c, "PLAY AGAIN", Rect2(40, 316, 360, 92), func(): main.show_game(), 30, Style.BTN_PRIMARY, "retry")
 	UI.button(c, "MENU", Rect2(40, 428, 170, 74), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
 	UI.button(c, "RANKING", Rect2(230, 428, 170, 74), func(): main.show_leaderboard(), 20, Style.BTN_GLASS, "trophy")

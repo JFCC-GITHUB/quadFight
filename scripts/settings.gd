@@ -39,6 +39,7 @@ var vs_cpu_char := "random"   # the opponent in LADDER: a fighter id or "random"
 var cpu_special := 1          # does the CPU use its special attack: 0 never, 1 when it happens, 2 aims for it
 var tour_diff := 1            # tournament difficulty: 0 easy (CPU Lv 1-10), 1 normal (6-15), 2 hard (11-20)
 var tour_clears := 0          # tournaments won
+var profile := {"pieces": 0, "time": 0.0, "keys": 0, "delay": 0.0, "delay_n": 0, "holes": 0}  # lifetime play record (skill.gd)
 var vs_char := "bastion"
 var vs_record := {}  # cpu level (int) -> [wins, losses]
 
@@ -69,6 +70,8 @@ func _ready() -> void:
 	vs_cpu_char = cfg.get_value("vs", "cpu_char", vs_cpu_char)
 	cpu_special = clampi(cfg.get_value("vs", "cpu_special", cpu_special), 0, 2)
 	tour_clears = int(cfg.get_value("vs", "tour_clears", tour_clears))
+	for k in profile:
+		profile[k] = cfg.get_value("profile", k, profile[k])
 	tour_diff = clampi(cfg.get_value("vs", "tour_diff", tour_diff), 0, 2)
 	vs_char = cfg.get_value("vs", "char", vs_char)
 	for lv in range(1, MAX_LEVEL + 1):
@@ -139,6 +142,13 @@ func add_vs_result(level: int, won: bool) -> void:
 	save()
 
 
+## Adds one finished game's play record to the lifetime profile.
+func add_profile(p: Dictionary) -> void:
+	for k in profile:
+		profile[k] += p.get(k, 0)
+	save()
+
+
 func save() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("audio", "sound", sound_on)
@@ -160,6 +170,8 @@ func save() -> void:
 	cfg.set_value("vs", "cpu_char", vs_cpu_char)
 	cfg.set_value("vs", "cpu_special", cpu_special)
 	cfg.set_value("vs", "tour_clears", tour_clears)
+	for k in profile:
+		cfg.set_value("profile", k, profile[k])
 	cfg.set_value("vs", "tour_diff", tour_diff)
 	cfg.set_value("vs", "char", vs_char)
 	for lv in vs_record:

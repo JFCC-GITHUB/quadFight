@@ -66,6 +66,9 @@ with their OFL.txt kept beside them in `assets/fonts/`.
 - Fight stats: `game.gd` `st` (sent / taken / blocked attack, best combo, quads, specials, time) fills the result card of every VS fight
   and, in the tournament, `Main.run["log"]` (one entry per attempt, win or lose); `summary.gd` (`Main.show_summary`) lists them with totals
   after the last win (then the champion screen) or when eliminated.
+- Skill estimate: `game.gd` records pieces, play time, key presses, reaction delay and holes created (`sk`) in every game (normal and VS);
+  `skill.gd` maps them to a CPU level (speed 50 %, stacking 30 %, reaction 20 %); the lifetime profile is `Settings.profile`.
+  Shown on the VS result card, the tournament summary and the normal game-over card. Needs 15+ pieces.
 - Tournament continues: `Main.run["credits"]` (3 at the start, max 5); losing with credits left shows a 10 s CONTINUE?
   countdown (`game.gd` `_continue_prompt`, `Main.continue_fight` retries the same opponent). A car-smashing bonus stage
   (`bonus.gd`, art `tools/gen_car.py` -> `assets/bonus/car_0..4.png`) comes after fight `Main.BONUS_AFTER`; destroying
