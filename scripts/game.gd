@@ -388,7 +388,7 @@ func _process(delta: float) -> void:
 			if clear_timer <= 0.0:
 				_finish_clear()
 	if vs and (state == State.PLAYING or state == State.CLEARING):
-		cpu.step(delta)
+		cpu.step(minf(delta, 0.1))  # a lag spike must not make the CPU play a burst of moves at once
 		if not cpu.alive:
 			_vs_end(true)
 	queue_redraw()
@@ -679,7 +679,7 @@ func _begin_clear(rows: Array) -> void:
 		if n == 4:
 			st["quads"] += 1
 		_send_attack(_attack_power(n, combo), true, rows)
-		if Characters.add_clear(char_id, have, n):
+		if cpu.special_in.is_empty() and Characters.add_clear(char_id, have, n):  # one special at a time on a board
 			_fire_special(true)
 	_shake(0.3 if n == 4 else 0.15, 7.0 if n == 4 else 3.0)
 	Sfx.play("clear%d" % n)
@@ -749,7 +749,7 @@ func _send_attack(power: int, from_player: bool, rows: Array) -> void:
 
 func _on_cpu_clear(n: int, combo_count: int) -> void:
 	_send_attack(_attack_power(n, combo_count), false, [])
-	if Settings.cpu_special != 0 and Characters.add_clear(cpu_char, cpu_have, n):
+	if Settings.cpu_special != 0 and special_in.is_empty() and Characters.add_clear(cpu_char, cpu_have, n):
 		_fire_special(false)
 	cpu.want = _cpu_want()
 
