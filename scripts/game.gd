@@ -137,7 +137,7 @@ func _ready() -> void:
 		cpu.on_clear = _on_cpu_clear
 		if cpu_char == "":
 			cpu_char = Characters.random_other(char_id)
-		cpu.aim = Settings.cpu_special == 2 or (Settings.cpu_special == 1 and Characters.is_dark(cpu_char))  # the boss plays for it
+		cpu.aim = Settings.cpu_special == 2
 		cpu.want = _cpu_want()
 		cpu.on_special = _on_cpu_special
 		player_portrait = Portrait.new()
@@ -388,7 +388,10 @@ func _process(delta: float) -> void:
 			if clear_timer <= 0.0:
 				_finish_clear()
 	if vs and (state == State.PLAYING or state == State.CLEARING):
-		cpu.step(minf(delta, 0.1))  # a lag spike must not make the CPU play a burst of moves at once
+		var left := delta  # the CPU lives on the same clock as the player: after a lag spike it catches up in small steps
+		while left > 0.0 and cpu.alive:
+			cpu.step(minf(left, 1.0 / 30.0))
+			left -= 1.0 / 30.0
 		if not cpu.alive:
 			_vs_end(true)
 	queue_redraw()
@@ -696,6 +699,8 @@ func _finish_clear() -> void:
 		pending_levelup = false
 		_popup("LEVEL %d" % level, Color("4dd0ff"))
 		Sfx.play("levelup")
+	if vs and not _apply_specials():
+		return
 	_spawn()
 
 
@@ -805,18 +810,26 @@ func _spawn_projectiles(count: int, from: Vector2, to: Vector2) -> void:
 
 ## Drops the pending garbage onto random columns of the player's board.
 ## Returns false if it overflowed the board (the player loses).
+## Special attacks land at the next lock, even when that lock clears lines (they cannot be dodged by clearing).
+func _apply_specials() -> bool:
+	if special_in.is_empty():
+		return true
+	for sid in special_in:
+		var ok := Characters.apply(sid, board)  # first: the lightning picks its side here
+		_play_fx(Characters.fx_hit(sid), Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
+		if not ok:
+			special_in.clear()
+			_game_over()
+			return false
+	special_in.clear()
+	Sfx.play("hit")
+	_shake(0.35, 7.0)
+	return true
+
+
 func _apply_incoming() -> bool:
-	if not special_in.is_empty():
-		for sid in special_in:
-			var ok := Characters.apply(sid, board)  # first: the lightning picks its side here
-			_play_fx(Characters.fx_hit(sid), Rect2(BOARD_POS.x, BOARD_POS.y + ROWS * CELL - 262.0, 300, 300), 12.0)
-			if not ok:
-				special_in.clear()
-				_game_over()
-				return false
-		special_in.clear()
-		Sfx.play("hit")
-		_shake(0.35, 7.0)
+	if not _apply_specials():
+		return false
 	if incoming <= 0:
 		return true
 	var n := incoming

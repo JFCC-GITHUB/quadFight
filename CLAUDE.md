@@ -61,8 +61,10 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   CPU special setting: NEVER / NORMAL / AIM), `char_select.gd` (two pages of 6; step 0 you, step 1 opponent or RANDOM), `intro.gd` (versus
   intro between fights + champion screen). The tournament ends with a boss: a "dark" copy of your own fighter (id
   `dark_<fighter>`, art `assets/chars/<fighter>_dark.png` from `dark_variant()` in gen_fighters.py, `Characters.base/def/
-  portrait` resolve it; it plays your theme slower/lower and aims for its special). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
+  portrait` resolve it; it plays your theme slower/lower; same CPU level as the previous fight). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
   ahead; `aim` + `want` make it steer toward the clears its special needs (quad recipes stay rare).
+- Specials land at the receiver's next lock even if it clears lines (`apply_specials`); a board holds one pending special at a time
+  (the attacker's recipe progress waits meanwhile). `cpu.aim` only with the AIM setting.
 - Fight stats: `game.gd` `st` (sent / taken / blocked attack, best combo, quads, specials, time) fills the result card of every VS fight
   and, in the tournament, `Main.run["log"]` (one entry per attempt, win or lose); `summary.gd` (`Main.show_summary`) lists them with totals
   after the last win (then the champion screen) or when eliminated.

@@ -88,7 +88,7 @@ func start_run(mode: String, level: int) -> void:
 		run["order"] = ids
 		run["cpu"] = ids[0]
 		var lv := tour_levels(level, ids.size() - 1)
-		lv.append(mini(lv[-1] + 1, CpuPlayer.MAX_LEVEL))
+		lv.append(lv[-1])  # the dark self is as strong as the last fight (a level jump also turns on the 2-piece lookahead at Lv 11)
 		run["levels"] = lv
 		run["level"] = lv[0]
 	else:
