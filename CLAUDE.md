@@ -63,6 +63,9 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   `dark_<fighter>`, art `assets/chars/<fighter>_dark.png` from `dark_variant()` in gen_fighters.py, `Characters.base/def/
   portrait` resolve it; it plays your theme slower/lower and aims for its special). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
   ahead; `aim` + `want` make it steer toward the clears its special needs (quad recipes stay rare).
+- Fight stats: `game.gd` `st` (sent / taken / blocked attack, best combo, quads, specials, time) fills the result card of every VS fight
+  and, in the tournament, `Main.run["log"]` (one entry per attempt, win or lose); `summary.gd` (`Main.show_summary`) lists them with totals
+  after the last win (then the champion screen) or when eliminated.
 - Tournament continues: `Main.run["credits"]` (3 at the start, max 5); losing with credits left shows a 10 s CONTINUE?
   countdown (`game.gd` `_continue_prompt`, `Main.continue_fight` retries the same opponent). A car-smashing bonus stage
   (`bonus.gd`, art `tools/gen_car.py` -> `assets/bonus/car_0..4.png`) comes after fight `Main.BONUS_AFTER`; destroying
