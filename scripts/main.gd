@@ -126,7 +126,7 @@ func next_fight() -> void:
 
 ## The run summary: every fight of the tournament, win or lose, plus totals.
 func show_summary() -> void:
-	_swap(SummaryScreen.new())
+	_swap(SummaryScreen.new(), true)
 
 
 func show_bonus(free: bool = false) -> void:

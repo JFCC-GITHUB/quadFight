@@ -24,13 +24,14 @@ func _build() -> void:
 		c.queue_free()
 	land = size.x > size.y
 	var x := 560.0 if land else 110.0
-	var ys := [44.0, 132.0, 212.0, 292.0, 360.0] if land else [492.0, 580.0, 658.0, 736.0, 804.0]
-	UI.button(self, "PLAY", Rect2(x, ys[0], 320, 80), func(): main.show_game(), 36, Style.BTN_PRIMARY, "play")
-	UI.button(self, "LADDER", Rect2(x, ys[1], 320, 72), func(): main.show_vs_select("ladder"), 30, Style.BTN_ACCENT, "up")
-	UI.button(self, "TOURNAMENT", Rect2(x, ys[2], 320, 72), func(): main.show_vs_select("tournament"), 26, Style.BTN_ACCENT,
+	var ys := [30.0, 114.0, 186.0, 258.0, 334.0, 396.0] if land else [470.0, 560.0, 634.0, 708.0, 790.0, 856.0]
+	UI.button(self, "PLAY", Rect2(x, ys[0], 320, 76), func(): main.show_game(), 36, Style.BTN_PRIMARY, "play")
+	UI.button(self, "LADDER", Rect2(x, ys[1], 320, 64), func(): main.show_vs_select("ladder"), 28, Style.BTN_ACCENT, "up")
+	UI.button(self, "TOURNAMENT", Rect2(x, ys[2], 320, 64), func(): main.show_vs_select("tournament"), 26, Style.BTN_ACCENT,
 		"swords")
-	UI.button(self, "RANKING", Rect2(x, ys[3], 320, 60), func(): main.show_leaderboard(), 24, Style.BTN_GLASS, "trophy")
-	UI.button(self, "OPTIONS", Rect2(x, ys[4], 320, 60), _open_options, 24, Style.BTN_GLASS, "gear")
+	UI.button(self, "PRACTICE", Rect2(x, ys[3], 320, 64), func(): main.show_vs_select("practice"), 26, Style.BTN_ACCENT, "play")
+	UI.button(self, "RANKING", Rect2(x, ys[4], 320, 56), func(): main.show_leaderboard(), 24, Style.BTN_GLASS, "trophy")
+	UI.button(self, "OPTIONS", Rect2(x, ys[5], 320, 56), _open_options, 24, Style.BTN_GLASS, "gear")
 	UI.icon_button(self, "fullscreen", Rect2(size.x - 68, 16, 52, 52), func(): Fullscreen.toggle(self), Style.BTN_GLASS)
 
 
@@ -94,10 +95,10 @@ func _draw() -> void:
 	var logo_h: float = logo_w * Style.LOGO.get_height() / Style.LOGO.get_width()
 	var bob := sin(time * 1.8) * 6.0
 	var cx := 280.0 if land else size.x * 0.5
-	draw_texture_rect(Style.LOGO, Rect2(cx - logo_w * 0.5, (64 if land else 150) + bob, logo_w, logo_h), false)
+	draw_texture_rect(Style.LOGO, Rect2(cx - logo_w * 0.5, (64 if land else 120) + bob, logo_w, logo_h), false)
 
 	# Best score pill
-	var pill := Rect2(cx - 120.0, 336 if land else 422, 240, 50)
+	var pill := Rect2(cx - 120.0, 336 if land else 396, 240, 50)
 	draw_style_box(Style.panel_box(Color(0, 0, 0, 0.35), 27, Color(1, 0.83, 0.3, 0.35)), pill)
 	Style.draw_icon(self, "trophy", pill.position + Vector2(34, 27), 26, Style.GOLD)
 	var best := Scores.best()
@@ -105,11 +106,3 @@ func _draw() -> void:
 	Style.text(self, Style.FONT_DISPLAY, pill.position + Vector2(0, 38), str(best) if best > 0 else "-",
 		26, Style.GOLD, HORIZONTAL_ALIGNMENT_RIGHT, pill.size.x - 24)
 
-	# Controls hint
-	var f := Style.FONT_SEMI
-	var y := 456.0 if land else 880.0
-	for line in ["Keyboard   Arrows · Space drop · C hold · P pause",
-			"Gamepad   D-pad · A / B rotate · X hold · Start",
-			"Touch   on-screen buttons"]:
-		Style.text(self, f, Vector2(0, y), line, 17, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-		y += 26

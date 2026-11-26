@@ -142,7 +142,7 @@ func _draw() -> void:
 	elif run["mode"] == "tournament":
 		head = "ROUND %d / %d" % [run["round"] + 1, run["order"].size()]
 	else:
-		head = "LADDER"
+		head = "PRACTICE" if run["mode"] == "practice" else "LADDER"
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 62 if land else 90), head, 40, Color("ff3050") if boss else Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
 	Style.text(self, Style.caption_font(), Vector2(0, 92 if land else 122), "CPU  LV %d   %s" % [run["level"], CpuPlayer.NAMES[run["level"] - 1].to_upper()],
