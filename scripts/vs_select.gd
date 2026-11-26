@@ -7,7 +7,8 @@ const CpuPlayer := preload("res://scripts/cpu_player.gd")
 const Main := preload("res://scripts/main.gd")
 
 var main: Node
-var mode := "ladder"   # "ladder" | "tournament"
+var mode := "ladder"   # "ladder" | "tournament" | "practice"
+const Skill := preload("res://scripts/skill.gd")
 var level := 3
 var time := 0.0
 var land := false
@@ -145,8 +146,8 @@ func _draw() -> void:
 	Style.draw_bg(self, size)
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.3))
 	var hx := size.x * 0.5
-	var title := "TOURNAMENT" if mode == "tournament" else "LADDER"
-	Style.draw_icon(self, "swords" if mode == "tournament" else "up", Vector2(hx - 40 - title.length() * 11.0, 64), 44, Style.TEXT)
+	var title: String = {"tournament": "TOURNAMENT", "practice": "PRACTICE"}.get(mode, "LADDER")
+	Style.draw_icon(self, {"tournament": "swords", "practice": "play"}.get(mode, "up"), Vector2(hx - 40 - title.length() * 11.0, 64), 44, Style.TEXT)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 82), title, 38, Style.TEXT, HORIZONTAL_ALIGNMENT_CENTER, size.x + 90, 8)
 	var cap := Style.caption_font()
 	var sub := "CHOOSE THE DIFFICULTY  (the levels climb evenly)" if mode == "tournament" else "CHOOSE THE COMPUTER'S LEVEL"
@@ -198,7 +199,11 @@ func _draw_level_card(card: Rect2, cap: Font, cx: float) -> void:
 		Style.text(self, cap, Vector2(card.position.x + 34, y), rows[i][0], 15, Style.MUTED)
 		Style.text(self, Style.FONT_BOLD, Vector2(card.position.x, y + 2), rows[i][1], 22, Style.TEXT,
 			HORIZONTAL_ALIGNMENT_RIGHT, card.size.x - 34)
+	Style.text(self, Style.FONT_SEMI, Vector2(card.position.x, card.end.y - 12), "You (all games):  " + Skill.text(Skill.estimate(Settings.profile)),
+		14, Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, card.size.x)
+	if mode == "practice":
+		return
 	var rec: Array = Settings.record(level)
-	Style.text(self, Style.FONT_SEMI, Vector2(card.position.x, card.end.y - 22),
+	Style.text(self, Style.FONT_SEMI, Vector2(card.position.x, card.end.y - 36),
 		"Your record:  %d wins  /  %d losses" % [rec[0], rec[1]], 18 if not land else 16, Style.CYAN,
 		HORIZONTAL_ALIGNMENT_CENTER, card.size.x)

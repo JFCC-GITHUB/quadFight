@@ -63,6 +63,9 @@ with their OFL.txt kept beside them in `assets/fonts/`.
   `dark_<fighter>`, art `assets/chars/<fighter>_dark.png` from `dark_variant()` in gen_fighters.py, `Characters.base/def/
   portrait` resolve it; it plays your theme slower/lower; same CPU level as the previous fight). CPU levels go to 20 (`CpuPlayer.MAX_LEVEL`); from level 11 it looks one piece
   ahead; `aim` + `want` make it steer toward the clears its special needs (quad recipes stay rare).
+- PRACTICE mode (`mode == "practice"`): same flow as the ladder (level -> you -> opponent), one fight, not recorded; result card
+  offers REMATCH / OPPONENT / MENU. The CPU uses hold from Lv 4 (`HOLD_FROM`) when the other piece scores clearly better.
+  The VS level card shows the lifetime skill estimate. The summary screen has a landscape layout and shrinks rows to fit.
 - Specials land at the receiver's next lock even if it clears lines (`apply_specials`); a board holds one pending special at a time
   (the attacker's recipe progress waits meanwhile). `cpu.aim` only with the AIM setting.
 - Fight stats: `game.gd` `st` (sent / taken / blocked attack, best combo, quads, specials, time) fills the result card of every VS fight

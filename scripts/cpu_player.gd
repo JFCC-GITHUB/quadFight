@@ -10,7 +10,9 @@ const Characters := preload("res://scripts/characters.gd")
 const COLS := 10
 const ROWS := 20
 const LOCK_DELAY := 0.5
-const INPUT_LAG := 0.05  # keyboard + screen latency before the first key of a piece (s)
+const INPUT_LAG := 0.05
+const HOLD_FROM := 4       # beginners do not use hold
+const HOLD_GAIN := 0.8     # how much better the other piece must look before it presses hold  # keyboard + screen latency before the first key of a piece (s)
 const GARBAGE := 7  # board value of a garbage block
 
 const MAX_LEVEL := 20
@@ -47,6 +49,9 @@ var exec_x := 0
 var actions: Array = []   # timed key presses [time since scheduling, "rot" | "move" | "drop", arg]
 var plan_t := 0.0
 var fixes := 0
+var hold_kind := -1
+var hold_used := false
+var want_hold := false
 var placed := 0     # pieces locked / key presses made (read by the speed test)
 var presses := 0
 
@@ -146,6 +151,31 @@ func _think(delta: float) -> void:
 				_move(a[2])
 			"drop":
 				_finish(p)
+			"hold":
+				presses += 1
+				_hold(p)
+
+
+## Presses hold: the current piece goes to the hold slot, the held (or next) piece comes in at the top.
+func _hold(p: Dictionary) -> void:
+	want_hold = false
+	hold_used = true
+	var old := kind
+	if hold_kind >= 0:
+		kind = hold_kind
+	else:
+		kind = queue.pop_front()
+		_refill()
+	hold_kind = old
+	rot = 0
+	pos = Vector2i(3, -1)
+	gravity_acc = 0.0
+	lock_timer = 0.0
+	has_plan = false
+	actions.clear()
+	think_timer = p["think"] * 0.4  # it already knows what it wants to do with the new piece
+	if _collides(kind, rot, pos):
+		alive = false
 
 
 ## 0..1: how messy / high the stack is. People think longer and slip more when it is.
@@ -158,6 +188,10 @@ func _panic() -> float:
 func _schedule(p: Dictionary, extra := 0.0, slip := true) -> void:
 	actions.clear()
 	plan_t = 0.0
+	if want_hold:
+		actions.append([INPUT_LAG + extra + rng.randf_range(0.0, 0.04), "hold", 0])
+		has_plan = true
+		return
 	exec_rot = plan_rot
 	exec_x = plan_x
 	if slip and rng.randf() < p["slip"] * (1.0 + _panic()):
@@ -266,6 +300,8 @@ func _spawn() -> void:
 	has_plan = false
 	actions.clear()
 	fixes = 0
+	hold_used = false
+	want_hold = false
 	# deciding takes longer on a messy stack; everyone varies from piece to piece
 	think_timer = params(level)["think"] * rng.randf_range(0.8, 1.3) * (1.0 + 0.5 * _panic())
 	if _collides(kind, rot, pos):
@@ -353,6 +389,7 @@ func _placements(k: int, bd: Array) -> Array:
 
 func _make_plan(mistake: float) -> void:
 	var cands: Array = []
+	var raw_best := -1e9
 	for pl in _placements(kind, board):
 		var ev := _eval_on(board, kind, pl[0], pl[2])
 		var in_well := false
@@ -360,6 +397,17 @@ func _make_plan(mistake: float) -> void:
 			if pl[2].x + c.x == COLS - 1:
 				in_well = true
 		cands.append([ev[0], pl[0], pl[1], ev[1], in_well, ev[2]])
+		raw_best = maxf(raw_best, ev[0])
+	# hold: swap to the held piece (or the next one) when it fits clearly better
+	if level >= HOLD_FROM and not hold_used:
+		var alt: int = hold_kind if hold_kind >= 0 else (queue[0] if not queue.is_empty() else -1)
+		if alt >= 0 and alt != kind:
+			var alt_best := -1e9
+			for pl in _placements(alt, board):
+				alt_best = maxf(alt_best, _eval_on(board, alt, pl[0], pl[2])[0])
+			if alt_best > raw_best + HOLD_GAIN:
+				want_hold = true
+				return
 	if aim and want.get(4, 0) > 0 and _max_height(board) < 11:
 		# quad stacking: the last column stays an open well; only an I piece that clears four goes in
 		var keep: Array = []

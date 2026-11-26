@@ -16,7 +16,7 @@ const PAGES := ["HEROES", "BEASTS"]
 
 var main: Node
 var level := 3         # CPU level chosen on the previous screen
-var mode := "ladder"   # "ladder" | "tournament"
+var mode := "ladder"   # "ladder" | "tournament" | "practice"
 var step := 0          # 0: your fighter, 1: the opponent (ladder)
 var random_pick := false
 var selected := 0
@@ -62,7 +62,7 @@ func _build() -> void:
 	fx = FxLayer.new()
 	fx.size = size
 	add_child(fx)
-	var go := "NEXT" if step == 0 and mode == "ladder" else "START"
+	var go := "NEXT" if step == 0 and mode != "tournament" else "START"
 	if land:
 		UI.button(self, go, Rect2(716, 436, 224, 80), _start, 34, Style.BTN_PRIMARY, "swords")
 	else:
@@ -136,7 +136,7 @@ func _start() -> void:
 	else:
 		Settings.vs_cpu_char = "random" if random_pick else Characters.LIST[selected]["id"]
 		Settings.save()
-		main.start_run("ladder", level)
+		main.start_run(mode, level)
 
 
 func _unhandled_input(event: InputEvent) -> void:

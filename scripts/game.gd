@@ -43,7 +43,7 @@ var fall_fx := {}          # Vector2i(board cell) -> {t, dur}: landing animation
 var projectiles: Array = []
 var char_id := "bastion"    # player's fighter (special attack, see characters.gd)
 var cpu_char := ""            # the opponent fighter (Main passes it; empty = random)
-var mode := "ladder"           # "ladder" | "tournament"
+var mode := "ladder"           # "ladder" | "tournament" | "practice" (one fight, not recorded)
 var round_no := 1              # tournament: which fight this is, of round_total
 var round_total := 0
 var st := {"sent": 0, "taken": 0, "blocked": 0, "combo": 0, "quads": 0, "specials": 0, "time": 0.0}  # VS fight stats
@@ -889,11 +889,11 @@ func _continue_prompt() -> void:
 
 func _vs_result(won: bool) -> void:
 	var tour := mode == "tournament"
-	if not tour:
+	if mode == "ladder":
 		Settings.add_vs_result(cpu_level, won)
 	var rec: Array = Settings.record(cpu_level)
 	var last := tour and round_no >= round_total
-	var has_next := won and (tour or cpu_level < CpuPlayer.MAX_LEVEL)
+	var has_next := won and mode != "practice" and (tour or cpu_level < CpuPlayer.MAX_LEVEL)
 	var card_h := 372.0 + 102.0 + (92.0 if has_next else 0.0) + 70.0 + 36.0
 	var c := _open_overlay(Rect2(50, (960.0 - card_h) * 0.5 - 40.0, 440, card_h))
 	var title := "YOU WIN!" if won else "YOU LOSE"
@@ -914,6 +914,8 @@ func _vs_result(won: bool) -> void:
 		UI.label(c, cells[i][0], Rect2(cx, cy, 190, 18), 12, Style.MUTED, HORIZONTAL_ALIGNMENT_LEFT, Style.FONT_SEMI)
 		UI.label(c, cells[i][1], Rect2(cx, cy + 14, 190, 30), 24, Style.TEXT, HORIZONTAL_ALIGNMENT_LEFT, Style.FONT_BOLD)
 	var info := "Round %d of %d" % [round_no, round_total] if tour else "Record at this level:  %d W  /  %d L" % [rec[0], rec[1]]
+	if mode == "practice":
+		info = "Practice: not recorded"
 	UI.label(c, info, Rect2(0, 330, 440, 28), 18, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
 	var y := 372.0
 	if tour:
@@ -931,6 +933,10 @@ func _vs_result(won: bool) -> void:
 		UI.button(c, "NEXT LEVEL  (Lv %d)" % (cpu_level + 1), Rect2(40, y, 360, 78), func(): main.next_fight(), 22,
 			Style.BTN_ACCENT, "swords")
 		y += 92.0
+	if mode == "practice":
+		UI.button(c, "OPPONENT", Rect2(40, y, 170, 70), func(): main.show_char_select(cpu_level, "practice", 1), 20, Style.BTN_GLASS, "up")
+		UI.button(c, "MENU", Rect2(230, y, 170, 70), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
+		return
 	UI.button(c, "LEVELS", Rect2(40, y, 170, 70), func(): main.show_vs_select("ladder"), 20, Style.BTN_GLASS, "up")
 	UI.button(c, "MENU", Rect2(230, y, 170, 70), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
 
@@ -1185,7 +1191,7 @@ func _draw_header() -> void:
 	var rx := size.x - 140.0
 	Style.text(self, cap, Vector2(sx, 42), "SCORE", 16, Style.MUTED, al, sw)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 88), str(int(round(display_score))), 40, Style.TEXT, al, sw, 8)
-	var vs_label := "LADDER" if mode == "ladder" else "ROUND %d / %d" % [round_no, round_total]
+	var vs_label: String = {"ladder": "LADDER", "practice": "PRACTICE"}.get(mode, "ROUND %d / %d" % [round_no, round_total])
 	if vs and landscape:
 		Style.text(self, cap, Vector2(sx, 124), vs_label, 16, Style.MUTED, al, sw)
 		Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 152), "Lv %d" % cpu_level, 22, Style.CYAN, al, sw)
