@@ -87,6 +87,11 @@ func use_touch() -> bool:
 	return OS.has_feature("mobile")
 
 
+## 2 players on one device: keyboards / gamepads only for now (phones have no room for two sets of buttons).
+func two_player_ok() -> bool:
+	return not use_touch()
+
+
 func key_slots(action: String) -> Array:
 	return keys.get(action, DEFAULT_KEYS[action])
 

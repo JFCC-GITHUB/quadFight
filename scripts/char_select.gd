@@ -74,7 +74,7 @@ func _build() -> void:
 			Style.BTN_ACCENT if k == page else Style.BTN_GLASS)
 	if step == 1:
 		var rr := Rect2(24, 448, 676, 64) if land else Rect2(26, 610, 488, 76)
-		UI.button(self, "RANDOM OPPONENT", rr, func():
+		UI.button(self, "RANDOM FIGHTER" if mode == "versus" else "RANDOM OPPONENT", rr, func():
 			random_pick = true
 			_build.call_deferred(), 26, Style.BTN_PRIMARY if random_pick else Style.BTN_GLASS)
 	_select(-1 if random_pick else selected)
@@ -103,6 +103,8 @@ func _card_rect(i: int) -> Rect2:
 func _back() -> void:
 	if step == 1:
 		main.show_char_select(level, mode, 0)
+	elif mode == "versus":
+		main.show_title()
 	else:
 		main.show_vs_select(mode)
 
@@ -180,7 +182,7 @@ func _draw_pips(id: String, at: Vector2, sz: float, col: Color) -> void:
 func _draw() -> void:
 	Style.draw_bg(self, size)
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.3))
-	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 74 if land else 82), "CHOOSE FIGHTER" if step == 0 else "CHOOSE OPPONENT", 36, Style.TEXT,
+	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 74 if land else 82), ("PLAYER 1" if step == 0 else "PLAYER 2") if mode == "versus" else ("CHOOSE FIGHTER" if step == 0 else "CHOOSE OPPONENT"), 36, Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
 	for i: int in _page_ids():
 		var d: Dictionary = Characters.LIST[i]
@@ -206,7 +208,7 @@ func _draw() -> void:
 	if random_pick:
 		draw_style_box(Style.panel_box(Style.PANEL, 22, Color(Style.GOLD, 0.7), Color(Style.GOLD, 0.18), 20), box)
 		Style.text(self, Style.FONT_DISPLAY, box.position + Vector2(18, 44), "RANDOM", 28, Style.GOLD)
-		draw_multiline_string(Style.FONT_SEMI, box.position + Vector2(18, 74), "A different fighter every time you start the ladder.",
+		draw_multiline_string(Style.FONT_SEMI, box.position + Vector2(18, 74), "A random fighter, picked when the fight starts." if mode == "versus" else "A different fighter every time you start the ladder.",
 			HORIZONTAL_ALIGNMENT_LEFT, box.size.x - 36.0, 15, 4, Style.TEXT)
 		return
 	draw_style_box(Style.panel_box(Style.PANEL, 22, Color(col, 0.7), Color(col, 0.18), 20), box)

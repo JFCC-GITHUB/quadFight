@@ -18,6 +18,7 @@ const LANDSCAPE := Vector2(960, 540)
 
 var current: Control
 var landscape_ok := false  # the current screen has a landscape layout
+var landscape_force := false  # 2-player versus: always the wide layout, even in a tall window
 ## The VS run in progress. mode "ladder": one opponent, the level keeps rising.
 ## mode "tournament": TOUR_FIGHTS random other fighters, one level harder each time, then your dark self.
 var run := {}
@@ -151,7 +152,8 @@ func show_match() -> void:
 	g.mode = run["mode"]
 	g.round_no = run["round"] + 1
 	g.round_total = run["order"].size()
-	_swap(g, true)
+	g.two_p = run["mode"] == "versus"
+	_swap(g, true, g.two_p)
 
 
 func show_leaderboard() -> void:
@@ -161,7 +163,7 @@ func show_leaderboard() -> void:
 ## Logical size: landscape only for screens that support it, and only while the window is wider than tall.
 func _screen_size() -> Vector2:
 	var w := get_window().size
-	return LANDSCAPE if landscape_ok and w.x > w.y else PORTRAIT
+	return LANDSCAPE if landscape_ok and (w.x > w.y or landscape_force) else PORTRAIT
 
 
 func _on_resized() -> void:
@@ -177,11 +179,12 @@ func _apply_orientation() -> void:
 		current.relayout()
 
 
-func _swap(screen: Control, allow_landscape: bool = false) -> void:
+func _swap(screen: Control, allow_landscape: bool = false, force_landscape: bool = false) -> void:
 	if current:
 		current.queue_free()
 	current = screen
 	landscape_ok = allow_landscape
+	landscape_force = force_landscape
 	get_window().content_scale_size = Vector2i(_screen_size())
 	screen.set("main", self)
 	screen.size = _screen_size()
@@ -200,10 +203,24 @@ func _setup_input() -> void:
 	_action("hold", [], [JOY_BUTTON_X], [])
 	_action("pause", [], [JOY_BUTTON_START], [])
 	_action("confirm", [KEY_ENTER, KEY_KP_ENTER], [JOY_BUTTON_A, JOY_BUTTON_START], [])
-	Settings.apply_keys()  # the rebindable keyboard keys (Options -> KEYS)
+	# 2 players on one computer: fixed key sets (no Ctrl / Alt / Tab: browser shortcuts), pad 1 and pad 2
+	for pl in [["p1_", P1_KEYS, 0], ["p2_", P2_KEYS, 1]]:
+		for a in pl[1]:
+			_action(pl[0] + a, pl[1][a], PAD[a], PAD_AXES.get(a, []), pl[2])
+	Settings.apply_keys()  # the rebindable keyboard keys (Options -> KEYS)  # the rebindable keyboard keys (Options -> KEYS)
 
 
-func _action(action: String, keys: Array, buttons: Array, axes: Array) -> void:
+const P1_KEYS := {"move_left": [KEY_A], "move_right": [KEY_D], "soft_drop": [KEY_S], "rotate_cw": [KEY_W],
+	"rotate_ccw": [KEY_Q], "hard_drop": [KEY_SPACE], "hold": [KEY_E]}
+const P2_KEYS := {"move_left": [KEY_LEFT], "move_right": [KEY_RIGHT], "soft_drop": [KEY_DOWN], "rotate_cw": [KEY_UP],
+	"rotate_ccw": [KEY_PERIOD, KEY_KP_1], "hard_drop": [KEY_SLASH, KEY_KP_0], "hold": [KEY_COMMA, KEY_KP_2]}
+const PAD := {"move_left": [JOY_BUTTON_DPAD_LEFT], "move_right": [JOY_BUTTON_DPAD_RIGHT], "soft_drop": [JOY_BUTTON_DPAD_DOWN],
+	"hard_drop": [JOY_BUTTON_DPAD_UP, JOY_BUTTON_Y], "rotate_cw": [JOY_BUTTON_A, JOY_BUTTON_RIGHT_SHOULDER],
+	"rotate_ccw": [JOY_BUTTON_B, JOY_BUTTON_LEFT_SHOULDER], "hold": [JOY_BUTTON_X]}
+const PAD_AXES := {"move_left": [[JOY_AXIS_LEFT_X, -1.0]], "move_right": [[JOY_AXIS_LEFT_X, 1.0]], "soft_drop": [[JOY_AXIS_LEFT_Y, 1.0]]}
+
+
+func _action(action: String, keys: Array, buttons: Array, axes: Array, device: int = -1) -> void:
 	InputMap.add_action(action, 0.5)
 	for k in keys:
 		var e := InputEventKey.new()
@@ -212,9 +229,11 @@ func _action(action: String, keys: Array, buttons: Array, axes: Array) -> void:
 	for b in buttons:
 		var j := InputEventJoypadButton.new()
 		j.button_index = b
+		j.device = device
 		InputMap.action_add_event(action, j)
 	for a in axes:
 		var m := InputEventJoypadMotion.new()
 		m.axis = a[0]
 		m.axis_value = a[1]
+		m.device = device
 		InputMap.action_add_event(action, m)

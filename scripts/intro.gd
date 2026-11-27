@@ -142,10 +142,11 @@ func _draw() -> void:
 	elif run["mode"] == "tournament":
 		head = "ROUND %d / %d" % [run["round"] + 1, run["order"].size()]
 	else:
-		head = "PRACTICE" if run["mode"] == "practice" else "LADDER"
+		head = {"practice": "PRACTICE", "versus": "2 PLAYERS"}.get(run["mode"], "LADDER")
 	Style.text(self, Style.FONT_DISPLAY, Vector2(0, 62 if land else 90), head, 40, Color("ff3050") if boss else Style.TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 8)
-	Style.text(self, Style.caption_font(), Vector2(0, 92 if land else 122), "CPU  LV %d   %s" % [run["level"], CpuPlayer.NAMES[run["level"] - 1].to_upper()],
+	var sub := "PLAYER 1   VS   PLAYER 2" if run["mode"] == "versus" else "CPU  LV %d   %s" % [run["level"], CpuPlayer.NAMES[run["level"] - 1].to_upper()]
+	Style.text(self, Style.caption_font(), Vector2(0, 92 if land else 122), sub,
 		16, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	if run["mode"] == "tournament":
 		var n: int = run.get("credits", 0)
