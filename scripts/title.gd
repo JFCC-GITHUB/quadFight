@@ -29,7 +29,12 @@ func _build() -> void:
 	UI.button(self, "LADDER", Rect2(x, ys[1], 320, 64), func(): main.show_vs_select("ladder"), 28, Style.BTN_ACCENT, "up")
 	UI.button(self, "TOURNAMENT", Rect2(x, ys[2], 320, 64), func(): main.show_vs_select("tournament"), 26, Style.BTN_ACCENT,
 		"swords")
-	UI.button(self, "PRACTICE", Rect2(x, ys[3], 320, 64), func(): main.show_vs_select("practice"), 26, Style.BTN_ACCENT, "play")
+	if Settings.two_player_ok():  # practice and 2 players share the row
+		UI.button(self, "PRACTICE", Rect2(x, ys[3], 156, 64), func(): main.show_vs_select("practice"), 20, Style.BTN_ACCENT, "play")
+		UI.button(self, "2 PLAYERS", Rect2(x + 164, ys[3], 156, 64), func(): main.show_char_select(3, "versus", 0), 20,
+			Style.BTN_ACCENT, "swords")
+	else:
+		UI.button(self, "PRACTICE", Rect2(x, ys[3], 320, 64), func(): main.show_vs_select("practice"), 26, Style.BTN_ACCENT, "play")
 	UI.button(self, "RANKING", Rect2(x, ys[4], 320, 56), func(): main.show_leaderboard(), 24, Style.BTN_GLASS, "trophy")
 	UI.button(self, "OPTIONS", Rect2(x, ys[5], 320, 56), _open_options, 24, Style.BTN_GLASS, "gear")
 	UI.icon_button(self, "fullscreen", Rect2(size.x - 68, 16, 52, 52), func(): Fullscreen.toggle(self), Style.BTN_GLASS)

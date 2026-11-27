@@ -9,6 +9,7 @@ const Skill := preload("res://scripts/skill.gd")
 const TouchLayout := preload("res://scripts/touch_layout.gd")
 const OptionsScreen := preload("res://scripts/options.gd")
 const CpuPlayer := preload("res://scripts/cpu_player.gd")
+const HumanPlayer := preload("res://scripts/human_player.gd")
 const Characters := preload("res://scripts/characters.gd")
 const Portrait := preload("res://scripts/portrait.gd")
 const FxLayer := preload("res://scripts/fx_layer.gd")
@@ -43,7 +44,10 @@ var fall_fx := {}          # Vector2i(board cell) -> {t, dur}: landing animation
 var projectiles: Array = []
 var char_id := "bastion"    # player's fighter (special attack, see characters.gd)
 var cpu_char := ""            # the opponent fighter (Main passes it; empty = random)
-var mode := "ladder"           # "ladder" | "tournament" | "practice" (one fight, not recorded)
+var mode := "ladder"           # "ladder" | "tournament" | "practice" (one fight, not recorded) | "versus" (2 players)
+var two_p := false             # 2-player versus: the "cpu" board is player 2 (human_player.gd), keys p1_* / p2_*
+var act := ""                  # input action prefix of this board: "p1_" in 2-player versus
+var over_at := -10.0           # when the game ended: confirm is ignored briefly so a mashing player cannot skip the result
 var round_no := 1              # tournament: which fight this is, of round_total
 var round_total := 0
 var st := {"sent": 0, "taken": 0, "blocked": 0, "combo": 0, "quads": 0, "specials": 0, "time": 0.0}  # VS fight stats
@@ -132,8 +136,10 @@ func _ready() -> void:
 	_apply_settings()
 	for r in ROWS:
 		board.append(_empty_row())
+	if two_p:
+		act = "p1_"
 	if vs:
-		cpu = CpuPlayer.new(cpu_level)
+		cpu = HumanPlayer.new(cpu_level) if two_p else CpuPlayer.new(cpu_level)
 		cpu.on_clear = _on_cpu_clear
 		if cpu_char == "":
 			cpu_char = Characters.random_other(char_id)
@@ -167,7 +173,14 @@ func _layout() -> void:
 	landscape = size.x > size.y
 	view_scale = 0.86 if landscape else 1.0
 	view_off = Vector2((size.x - 540.0 * view_scale) * 0.5, (size.y - 600.0 * view_scale) * 0.5 - 112.0 * view_scale) if landscape else Vector2.ZERO
-	touch_on = Settings.use_touch()
+	touch_on = Settings.use_touch() and not two_p
+	if two_p and landscape:   # two full boards: player 1 on the left, player 2 on the right
+		view_off.x = 6.0
+		cpu_cell = 22.0
+		cpu_pad = 10.0
+		cpu_portrait_rect = Rect2(790, 300, 120, 120)
+		cpu_rect = Rect2(498, 8, cpu_cell * COLS + cpu_pad * 2.0, 40.0 + cpu_cell * ROWS + 44.0)
+		return
 	if not landscape:       # right column: the board is as wide as the column
 		cpu_cell = 10.0
 		cpu_pad = 0.0
@@ -242,7 +255,7 @@ func _empty_row() -> Array:
 # ---------------------------------------------------------------- input
 
 func _held(action: String) -> bool:
-	return Input.is_action_pressed(action) or touch_map.values().has(action)
+	return Input.is_action_pressed(act + action) or touch_map.values().has(action)
 
 
 func _input(event: InputEvent) -> void:
@@ -254,7 +267,13 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenDrag:
 		_drag(event)
 		return
+	if two_p and (state == State.PLAYING or state == State.CLEARING):
+		for a in ["rotate_cw", "rotate_ccw", "hard_drop", "hold"]:
+			if event.is_action_pressed("p2_" + a):
+				cpu.press(a)
 	if state == State.OVER:
+		if time - over_at < 0.8:
+			return
 		if entering_name:
 			_name_input(event)
 		elif event.is_action_pressed("confirm"):
@@ -276,7 +295,7 @@ func _input(event: InputEvent) -> void:
 	if state != State.PLAYING:
 		return
 	for a in ["rotate_cw", "rotate_ccw", "hard_drop", "hold"]:
-		if event.is_action_pressed(a):
+		if event.is_action_pressed(act + a):
 			_one_shot(a)
 
 
@@ -617,7 +636,7 @@ func _count_holes() -> int:
 
 ## Hands the finished game's record to the lifetime profile (once) and returns its skill estimate.
 func _finish_record() -> float:
-	if not sk_saved:
+	if not sk_saved and not two_p:  # in a 2-player game we cannot tell whose profile it is
 		sk_saved = true
 		Settings.add_profile(sk)
 		if mode == "tournament":
@@ -754,7 +773,7 @@ func _send_attack(power: int, from_player: bool, rows: Array) -> void:
 
 func _on_cpu_clear(n: int, combo_count: int) -> void:
 	_send_attack(_attack_power(n, combo_count), false, [])
-	if Settings.cpu_special != 0 and special_in.is_empty() and Characters.add_clear(cpu_char, cpu_have, n):
+	if (two_p or Settings.cpu_special != 0) and special_in.is_empty() and Characters.add_clear(cpu_char, cpu_have, n):
 		_fire_special(false)
 	cpu.want = _cpu_want()
 
@@ -865,6 +884,7 @@ func _vs_end(won: bool) -> void:
 	last_fight.merge(st)
 	if mode == "tournament":
 		main.run["log"].append(last_fight)
+	over_at = time
 	if mode == "tournament" and not won and main.run.get("credits", 0) > 0:
 		_continue_prompt()
 		return
@@ -893,18 +913,21 @@ func _vs_result(won: bool) -> void:
 		Settings.add_vs_result(cpu_level, won)
 	var rec: Array = Settings.record(cpu_level)
 	var last := tour and round_no >= round_total
-	var has_next := won and mode != "practice" and (tour or cpu_level < CpuPlayer.MAX_LEVEL)
+	var has_next := won and mode != "practice" and mode != "versus" and (tour or cpu_level < CpuPlayer.MAX_LEVEL)
 	var card_h := 372.0 + 102.0 + (92.0 if has_next else 0.0) + 70.0 + 36.0
 	var c := _open_overlay(Rect2(50, (960.0 - card_h) * 0.5 - 40.0, 440, card_h))
 	var title := "YOU WIN!" if won else "YOU LOSE"
 	if tour:
 		title = ("CHAMPION!" if last else "ROUND CLEAR") if won else "ELIMINATED"
+	if two_p:
+		title = "PLAYER 1 WINS!" if won else "PLAYER 2 WINS!"
 	UI.label(c, title, Rect2(0, 26, 440, 70), 42 if tour else 46,
 		Style.GOLD if won else Color("ff6f8e"), HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_DISPLAY)
 	var foe: String = Characters.def(cpu_char)["name"]
-	UI.label(c, "vs %s  (CPU Lv %d  %s)" % [foe, cpu_level, CpuPlayer.NAMES[cpu_level - 1]], Rect2(0, 100, 440, 34), 18,
+	var vs_text := "%s  vs  %s" % [Characters.def(char_id)["name"], foe] if two_p else "vs %s  (CPU Lv %d  %s)" % [foe, cpu_level, CpuPlayer.NAMES[cpu_level - 1]]
+	UI.label(c, vs_text, Rect2(0, 100, 440, 34), 18,
 		Style.MUTED, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
-	var cells := [["SCORE", str(score)], ["LINES  YOU / CPU", "%d / %d" % [lines, cpu.lines]],
+	var cells := [["SCORE", str(score)], ["LINES  P1 / P2" if two_p else "LINES  YOU / CPU", "%d / %d" % [lines, cpu.lines]],
 		["ATTACK SENT", str(st["sent"])], ["ATTACK TAKEN", str(st["taken"])],
 		["BEST COMBO", str(st["combo"])], ["SPECIALS", str(st["specials"])],
 		["YOUR LEVEL (EST.)", "Lv %d" % roundi(last_est) if last_est >= 0.0 else "-"], ["TIME", "%d:%02d" % [int(st["time"]) / 60, int(st["time"]) % 60]]]
@@ -916,6 +939,8 @@ func _vs_result(won: bool) -> void:
 	var info := "Round %d of %d" % [round_no, round_total] if tour else "Record at this level:  %d W  /  %d L" % [rec[0], rec[1]]
 	if mode == "practice":
 		info = "Practice: not recorded"
+	if two_p:
+		info = "Stats are player 1's.  2-player games are not recorded"
 	UI.label(c, info, Rect2(0, 330, 440, 28), 18, Style.CYAN, HORIZONTAL_ALIGNMENT_CENTER, Style.FONT_SEMI)
 	var y := 372.0
 	if tour:
@@ -933,8 +958,11 @@ func _vs_result(won: bool) -> void:
 		UI.button(c, "NEXT LEVEL  (Lv %d)" % (cpu_level + 1), Rect2(40, y, 360, 78), func(): main.next_fight(), 22,
 			Style.BTN_ACCENT, "swords")
 		y += 92.0
-	if mode == "practice":
-		UI.button(c, "OPPONENT", Rect2(40, y, 170, 70), func(): main.show_char_select(cpu_level, "practice", 1), 20, Style.BTN_GLASS, "up")
+	if mode == "practice" or two_p:
+		if two_p:
+			UI.button(c, "FIGHTERS", Rect2(40, y, 170, 70), func(): main.show_char_select(cpu_level, "versus", 0), 20, Style.BTN_GLASS, "up")
+		else:
+			UI.button(c, "OPPONENT", Rect2(40, y, 170, 70), func(): main.show_char_select(cpu_level, "practice", 1), 20, Style.BTN_GLASS, "up")
 		UI.button(c, "MENU", Rect2(230, y, 170, 70), func(): main.show_title(), 20, Style.BTN_GLASS, "home")
 		return
 	UI.button(c, "LEVELS", Rect2(40, y, 170, 70), func(): main.show_vs_select("ladder"), 20, Style.BTN_GLASS, "up")
@@ -980,6 +1008,7 @@ func _game_over() -> void:
 		_vs_end(false)
 		return
 	state = State.OVER
+	over_at = time
 	last_est = _finish_record()
 	touch_map.clear()
 	Sfx.stop_music()
@@ -1158,7 +1187,8 @@ func _danger() -> bool:
 
 func _draw() -> void:
 	Style.draw_bg(self, size)
-	_draw_header()
+	if not two_p:  # two boards fill the screen: pause with P / Esc instead
+		_draw_header()
 	draw_set_transform_matrix(_view_xf())
 	_draw_side_panels()
 
@@ -1174,7 +1204,7 @@ func _draw() -> void:
 		_draw_cpu_panel()
 	if touch_on:
 		_draw_touch_buttons()
-	else:
+	elif not two_p:
 		_draw_key_hints()
 
 
@@ -1191,10 +1221,11 @@ func _draw_header() -> void:
 	var rx := size.x - 140.0
 	Style.text(self, cap, Vector2(sx, 42), "SCORE", 16, Style.MUTED, al, sw)
 	Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 88), str(int(round(display_score))), 40, Style.TEXT, al, sw, 8)
-	var vs_label: String = {"ladder": "LADDER", "practice": "PRACTICE"}.get(mode, "ROUND %d / %d" % [round_no, round_total])
+	var vs_label: String = {"ladder": "LADDER", "practice": "PRACTICE", "versus": "PLAYER 1"}.get(mode, "ROUND %d / %d" % [round_no, round_total])
 	if vs and landscape:
 		Style.text(self, cap, Vector2(sx, 124), vs_label, 16, Style.MUTED, al, sw)
-		Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 152), "Lv %d" % cpu_level, 22, Style.CYAN, al, sw)
+		if not two_p:
+			Style.text(self, Style.FONT_DISPLAY, Vector2(sx, 152), "Lv %d" % cpu_level, 22, Style.CYAN, al, sw)
 	elif vs:
 		Style.text(self, cap, Vector2(rx - 40.0, 42), vs_label, 16, Style.MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 164)
 		Style.text(self, Style.FONT_DISPLAY, Vector2(rx, 74), "Lv %d" % cpu_level, 22, Style.CYAN,
@@ -1266,7 +1297,7 @@ func _draw_cpu_panel() -> void:
 	var r := cpu_rect
 	var cap := Style.caption_font()
 	draw_style_box(Style.panel_box(Style.PANEL, 16, Color(1, 0.45, 0.55, 0.35) if cpu.incoming > 0 else Style.PANEL_BORDER), r)
-	Style.text(self, cap, r.position + Vector2(0, 26), "CPU  LV %d" % cpu_level, 15, Style.MUTED,
+	Style.text(self, cap, r.position + Vector2(0, 26), "PLAYER 2" if two_p else "CPU  LV %d" % cpu_level, 15, Style.MUTED,
 		HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 	var o := r.position + Vector2(cpu_pad, 40)
 	var cell := Vector2(cpu_cell, cpu_cell)
@@ -1276,6 +1307,16 @@ func _draw_cpu_panel() -> void:
 			var v: int = cpu.board[yy][xx]
 			if v >= 0:
 				Style.draw_block(self, v, Rect2(o + Vector2(xx, yy) * cpu_cell, cell))
+	if cpu.alive and two_p:  # player 2 needs a ghost piece, the next piece and the hold slot like player 1
+		var g: Vector2i = cpu.pos
+		while not cpu._collides(cpu.kind, cpu.rot, g + Vector2i(0, 1)):
+			g.y += 1
+		for c in Pieces.cells(cpu.kind, cpu.rot):
+			var q: Vector2i = g + c
+			if q.y >= 0:
+				draw_rect(Rect2(o + Vector2(q) * cpu_cell, cell).grow(-1), Color(1, 1, 1, 0.16))
+		_mini_piece(Rect2(778, 16, 150, 120), "NEXT", cpu.queue[0] if not cpu.queue.is_empty() else -1)
+		_mini_piece(Rect2(778, 148, 150, 120), "HOLD", cpu.hold_kind)
 	if cpu.alive:
 		for c in Pieces.cells(cpu.kind, cpu.rot):
 			var q: Vector2i = cpu.pos + c
@@ -1300,6 +1341,23 @@ func _draw_cpu_panel() -> void:
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * Characters.progress(cpu_char, cpu_have), bar.size.y)), cc)
 	Style.text(self, Style.FONT_BOLD, Vector2(pr.position.x, pr.end.y + 20), cd["name"], 15, cc,
 		HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
+
+
+## A titled box with one piece in it (player 2's next / hold in a 2-player game).
+func _mini_piece(r: Rect2, title: String, k: int) -> void:
+	_side_panel(r, title)
+	if k < 0:
+		return
+	var cells: Array = Pieces.cells(k, 0)
+	var mn := Vector2(99, 99)
+	var mx := Vector2(-99, -99)
+	for c in cells:
+		mn = Vector2(minf(mn.x, c.x), minf(mn.y, c.y))
+		mx = Vector2(maxf(mx.x, c.x), maxf(mx.y, c.y))
+	var s := 22.0
+	var o := r.get_center() + Vector2(0, 12) - (mx - mn + Vector2.ONE) * s * 0.5 - mn * s
+	for c in cells:
+		Style.draw_block(self, k, Rect2(o + Vector2(c) * s, Vector2(s, s)))
 
 
 ## Computers have no on-screen buttons: show the keys instead (they follow Options -> KEYS).
