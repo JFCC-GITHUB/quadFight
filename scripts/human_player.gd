@@ -10,6 +10,7 @@ var das_dir := 0
 var das_timer := 0.0
 var lock_resets := 0
 var soft_lock := false
+var touch: Dictionary = {}   # the game screen's touch map (tablet): finger -> button name, ours start with "p2:"
 
 
 func _init(lv: int = 10) -> void:
@@ -30,8 +31,12 @@ func press(action: String) -> void:
 				_hold(params(level))
 
 
+func _down(action: String) -> bool:
+	return Input.is_action_pressed(P + action) or touch.values().has("p2:" + action)
+
+
 func _think(delta: float) -> void:
-	var dir := int(Input.is_action_pressed(P + "move_right")) - int(Input.is_action_pressed(P + "move_left"))
+	var dir := int(_down("move_right")) - int(_down("move_left"))
 	if dir == 0:
 		das_dir = 0
 		return
@@ -49,7 +54,7 @@ func _think(delta: float) -> void:
 
 
 func gravity_interval() -> float:
-	var held := Input.is_action_pressed(P + "soft_drop")
+	var held := _down("soft_drop")
 	if not held:
 		soft_lock = false
 	return minf(super(), 0.05) if held and not soft_lock else super()
@@ -64,4 +69,4 @@ func _on_moved() -> void:
 func _spawn() -> void:
 	super()
 	lock_resets = 0
-	soft_lock = Input.is_action_pressed(P + "soft_drop")
+	soft_lock = _down("soft_drop")

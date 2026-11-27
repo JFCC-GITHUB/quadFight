@@ -62,6 +62,28 @@ static func buttons(layout: String, swap_sides: bool, landscape: bool = false) -
 	return list
 
 
+## 2 players on one tablet (960x540, screen coordinates): one compact set of buttons under each player's board.
+## Player 2's button names are prefixed "p2:"; "half" keeps a touch from snapping to the other player's buttons.
+static func two_player() -> Array:
+	var list: Array = []
+	for half in 2:
+		var hx := 480.0 * half
+		var pre := "p2:" if half == 1 else ""
+		var row := [
+			_b(pre + "move_left", "left", hx + 12, 414, 74, 122, true, Style.BTN_GLASS, 0, 16),
+			_b(pre + "hold", "hold", hx + 92, 414, 74, 58, false, Style.BTN_GLASS, 0, 16),
+			_b(pre + "soft_drop", "down", hx + 92, 478, 74, 58, true, Style.BTN_GLASS, 0, 16),
+			_b(pre + "move_right", "right", hx + 172, 414, 74, 122, true, Style.BTN_GLASS, 0, 16),
+			_b(pre + "rotate_ccw", "rotate_ccw", hx + 266, 414, 96, 58, false, Style.BTN_ACCENT, 1, 16),
+			_b(pre + "rotate_cw", "rotate", hx + 368, 414, 100, 58, false, Style.BTN_ACCENT, 1, 16),
+			_b(pre + "hard_drop", "drop", hx + 266, 478, 202, 58, false, Style.BTN_PRIMARY, 1, 16),
+		]
+		for b in row:
+			b["half"] = half
+		list.append_array(row)
+	return list
+
+
 static func _b(name: String, icon: String, x: float, y: float, w: float, h: float,
 		held: bool, scheme: Array, cluster: int, radius: int = 20) -> Dictionary:
 	return {"name": name, "icon": icon, "rect": Rect2(x, y, w, h), "held": held,

@@ -89,7 +89,14 @@ func use_touch() -> bool:
 
 ## 2 players on one device: keyboards / gamepads only for now (phones have no room for two sets of buttons).
 func two_player_ok() -> bool:
-	return not use_touch()
+	return not use_touch() or is_tablet()
+
+
+## A touch screen big enough for two sets of buttons: the short side is at least 600 CSS px (tablets, not phones).
+func is_tablet() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	return float(JavaScriptBridge.eval("Math.min(screen.width, screen.height)", true)) >= 600.0
 
 
 func key_slots(action: String) -> Array:
