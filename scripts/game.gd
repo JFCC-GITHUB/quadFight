@@ -47,6 +47,9 @@ var cpu_char := ""            # the opponent fighter (Main passes it; empty = ra
 var mode := "ladder"           # "ladder" | "tournament" | "practice" (one fight, not recorded) | "versus" (2 players)
 var two_p := false             # 2-player versus: the "cpu" board is player 2 (human_player.gd), keys p1_* / p2_*
 var act := ""                  # input action prefix of this board: "p1_" in 2-player versus
+var tablet := false            # 2-player versus on a tablet: both players use on-screen buttons
+var p2_side := Rect2(778, 16, 150, 120)  # player 2's NEXT box; HOLD sits below it
+const PAUSE_RECT_2P := Rect2(452, 8, 56, 56)
 var over_at := -10.0           # when the game ended: confirm is ignored briefly so a mashing player cannot skip the result
 var round_no := 1              # tournament: which fight this is, of round_total
 var round_total := 0
@@ -140,6 +143,8 @@ func _ready() -> void:
 		act = "p1_"
 	if vs:
 		cpu = HumanPlayer.new(cpu_level) if two_p else CpuPlayer.new(cpu_level)
+		if two_p:
+			cpu.touch = touch_map  # same dictionary: player 2's on-screen buttons on a tablet
 		cpu.on_clear = _on_cpu_clear
 		if cpu_char == "":
 			cpu_char = Characters.random_other(char_id)
@@ -173,7 +178,17 @@ func _layout() -> void:
 	landscape = size.x > size.y
 	view_scale = 0.86 if landscape else 1.0
 	view_off = Vector2((size.x - 540.0 * view_scale) * 0.5, (size.y - 600.0 * view_scale) * 0.5 - 112.0 * view_scale) if landscape else Vector2.ZERO
-	touch_on = Settings.use_touch() and not two_p
+	tablet = two_p and Settings.use_touch()
+	touch_on = Settings.use_touch() and (not two_p or tablet)
+	if tablet:   # each player gets half the screen: board on top, buttons below
+		view_scale = 0.54
+		view_off = Vector2(93.5, 8.0 - 112.0 * view_scale)
+		cpu_cell = 16.0
+		cpu_pad = 10.0
+		cpu_rect = Rect2(520, 8, cpu_cell * COLS + cpu_pad * 2.0, 40.0 + cpu_cell * ROWS + 44.0)
+		cpu_portrait_rect = Rect2(822, 24, 110, 110)
+		p2_side = Rect2(710, 8, 100, 110)
+		return
 	if two_p and landscape:   # two full boards: player 1 on the left, player 2 on the right
 		view_off.x = 6.0
 		cpu_cell = 22.0
@@ -237,6 +252,8 @@ func relayout() -> void:
 ## (Re)reads options: touch layout, auto-repeat speed. Called at start and after the options screen.
 func _apply_settings() -> void:
 	touch_buttons = TouchLayout.buttons(Settings.layout, Settings.swap_sides, landscape) if touch_on else []
+	if tablet:
+		touch_buttons = TouchLayout.two_player()
 	_btn_styles.clear()
 	for b in touch_buttons:
 		_btn_styles[b["rect"].position] = [Style.button_box(b["scheme"], false, b["radius"]), Style.button_box(b["scheme"], true, b["radius"])]
@@ -309,6 +326,8 @@ func _button_at(p: Vector2) -> Dictionary:
 	var best := {}
 	var best_d := TOUCH_SLOP
 	for b in touch_buttons:
+		if b.has("half") and int(p.x >= 480.0) != b["half"]:
+			continue  # never snap to the other player's buttons
 		var r: Rect2 = b["rect"]
 		var d := p.distance_to(p.clamp(r.position, r.end))  # 0 inside the rect
 		if d < best_d:
@@ -337,13 +356,20 @@ func _dpad_at(p: Vector2) -> Dictionary:
 
 func _touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
-		if PAUSE_RECT.has_point(event.position) and state != State.OVER:
+		if (PAUSE_RECT_2P if two_p else PAUSE_RECT).has_point(event.position) and state != State.OVER:
 			_toggle_pause()
-			return
-		if state != State.PLAYING:
 			return
 		var b := _button_at(event.position)
 		if b.is_empty():
+			return
+		if b["name"].begins_with("p2:"):  # player 2 keeps playing while player 1's lines clear
+			if state == State.PLAYING or state == State.CLEARING:
+				if b["held"]:
+					touch_map[event.index] = b["name"]
+				else:
+					cpu.press(b["name"].substr(3))
+			return
+		if state != State.PLAYING:
 			return
 		if b["held"]:
 			touch_map[event.index] = b["name"]
@@ -359,7 +385,7 @@ func _touch(event: InputEventScreenTouch) -> void:
 
 
 func _drag(event: InputEventScreenDrag) -> void:
-	if state != State.PLAYING or not touch_map.has(event.index):
+	if (state != State.PLAYING and state != State.CLEARING) or not touch_map.has(event.index):
 		return
 	var b := _button_at(event.position)
 	if b.is_empty():
@@ -1189,6 +1215,9 @@ func _draw() -> void:
 	Style.draw_bg(self, size)
 	if not two_p:  # two boards fill the screen: pause with P / Esc instead
 		_draw_header()
+	elif tablet:   # no keyboard: a small pause button between the two boards
+		draw_style_box(Style.button_box(Style.BTN_GLASS, state == State.PAUSED, 16), PAUSE_RECT_2P)
+		Style.draw_icon(self, "pause", PAUSE_RECT_2P.get_center(), 28)
 	draw_set_transform_matrix(_view_xf())
 	_draw_side_panels()
 
@@ -1315,8 +1344,8 @@ func _draw_cpu_panel() -> void:
 			var q: Vector2i = g + c
 			if q.y >= 0:
 				draw_rect(Rect2(o + Vector2(q) * cpu_cell, cell).grow(-1), Color(1, 1, 1, 0.16))
-		_mini_piece(Rect2(778, 16, 150, 120), "NEXT", cpu.queue[0] if not cpu.queue.is_empty() else -1)
-		_mini_piece(Rect2(778, 148, 150, 120), "HOLD", cpu.hold_kind)
+		_mini_piece(p2_side, "NEXT", cpu.queue[0] if not cpu.queue.is_empty() else -1)
+		_mini_piece(Rect2(p2_side.position + Vector2(0, p2_side.size.y + 8), p2_side.size), "HOLD", cpu.hold_kind)
 	if cpu.alive:
 		for c in Pieces.cells(cpu.kind, cpu.rot):
 			var q: Vector2i = cpu.pos + c
@@ -1491,7 +1520,7 @@ func _draw_touch_buttons() -> void:
 	var down := touch_map.values()
 	var playing := state == State.PLAYING
 	for b in touch_buttons:
-		var pressed: bool = down.has(b["name"]) or (playing and Input.is_action_pressed(b["name"]))
+		var pressed: bool = down.has(b["name"]) or (playing and InputMap.has_action(b["name"]) and Input.is_action_pressed(b["name"]))
 		var r: Rect2 = b["rect"]
 		draw_style_box(_btn_styles[b["rect"].position][1 if pressed else 0], r)
 		var center := r.get_center() + Vector2(0, 3 if pressed else -2)

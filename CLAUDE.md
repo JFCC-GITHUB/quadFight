@@ -66,7 +66,10 @@ with their OFL.txt kept beside them in `assets/fonts/`.
 - PRACTICE mode (`mode == "practice"`): same flow as the ladder (level -> you -> opponent), one fight, not recorded; result card
   offers REMATCH / OPPONENT / MENU. The CPU uses hold from Lv 4 (`HOLD_FROM`) when the other piece scores clearly better.
   The VS level card shows the lifetime skill estimate. The summary screen has a landscape layout and shrinks rows to fit.
-- 2 PLAYERS (`mode == "versus"`, title button only when `Settings.two_player_ok()`, i.e. no touch): player 2 is
+- 2 PLAYERS (`mode == "versus"`, title button only when `Settings.two_player_ok()`: no touch, or a tablet = `Settings.is_tablet()`,
+  short screen side >= 600 CSS px; phones never get it). On a tablet (`game.gd` `tablet`) each half of the screen is one player: board on
+  top, `TouchLayout.two_player()` buttons below (P2 names prefixed `p2:`, never snapping across halves, read by `human_player.gd` via
+  `touch`), pause button between the boards. Player 2 is
   `human_player.gd` (extends CpuPlayer, driven by `p2_*` actions, same DAS/ARR / soft drop / 15 lock resets as player 1) shown as a
   big right-hand board; player 1 uses `p1_*` (`game.gd` `act` prefix). Fixed keys in `main.gd` `P1_KEYS` / `P2_KEYS` (no Ctrl/Alt/Tab:
   browser shortcuts), pads by device 0 / 1. Always the landscape layout (`Main.landscape_force`). Not recorded, no profile update.
