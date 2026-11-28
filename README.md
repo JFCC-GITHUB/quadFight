@@ -102,13 +102,13 @@ writes `SHA256SUMS.txt` and publishes a GitHub Release using `RELEASE_NOTES.md`.
 [RELEASE_NOTES.md](RELEASE_NOTES.md) · [CHANGELOG.md](CHANGELOG.md)
 
 ## Legal
-- **License:** the code and the generated art and music are under the [MIT License](LICENSE) (courtesy translation: [LICENSE.zh-TW.md](LICENSE.zh-TW.md); the English text is the binding one).
+- **License:** the code and the generated art and music are under the [PolyForm Noncommercial License 1.0.0](LICENSE): free for any non-commercial use (play, study, hobby, education, charity); **commercial use needs the author's written permission**. Source-available, not OSI "open source". Plain-language summary in Traditional Chinese: [LICENSE.zh-TW.md](LICENSE.zh-TW.md) (the English text is the binding one). Third-party parts keep their own licences (below). Version v1.0.0 was released under the MIT License and stays available under it; v1.0.1 and later use PolyForm Noncommercial.
 - **Third-party components** (Godot Engine, fonts): see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/godot/`.
 - **Privacy:** no data is collected or sent anywhere. See [PRIVACY.md](PRIVACY.md).
 - **Disclaimer:** the software is provided "AS IS", without warranty of any kind (see the licence). Unsigned binaries are used at your own discretion.
 - **Trademarks:** "Tetris" is a registered trademark of its owner. QuadFight is an independent work with no affiliation to The Tetris Company, Tetris Holding or any other game publisher.
   Other product names (Godot, Windows, macOS, Linux, iOS, Safari, …) belong to their owners and are used only to describe compatibility.
-- **Contributing:** contributions are welcome via pull request; by submitting one you agree to license it under the MIT License.
+- **Contributing:** contributions are welcome via pull request; by submitting one you agree to license it under the same PolyForm Noncommercial License and allow the author to also relicense it (e.g. for a commercial licence).
   Do not add third-party trademarks, copied art, music or melodies.
 
 ---

@@ -1,11 +1,13 @@
-# QuadFight v1.0.0 – 發行說明 🇹🇼
+# QuadFight v1.0.1 – 發行說明 🇹🇼
 
 [English](RELEASE_NOTES.md) · **繁體中文**
 
-_發行日期：2026-11-28 · 首次公開發行_
+_發行日期：2026-11-28 · 首次完整多平台發行_
+
+> **授權變更：** 自 v1.0.1 起，QuadFight 採用 **PolyForm Noncommercial License 1.0.0**（任何非商業用途免費；商業使用需取得作者許可）。v1.0.0 以 MIT 發行，仍可依 MIT 使用。遊戲內容無變動。
 
 QuadFight 是免費、非營利的落塊益智遊戲：電腦對手像真人一樣遊玩、12 位角色各有絕招，並支援本機雙人對戰。
-v1.0.0 是第一個可下載的版本，涵蓋 **Windows、macOS、Linux 與網頁**。
+v1.0.1 是第一個可下載的版本，涵蓋 **Windows、macOS、Linux 與網頁**。
 
 ## 重點
 - **四個平台：** Windows 10/11（x64）、macOS 11 以上（Universal：Apple 晶片＋Intel）、Linux（x86-64）與網頁版（含 iOS Safari）。全新應用程式圖示。
@@ -22,16 +24,16 @@ v1.0.0 是第一個可下載的版本，涵蓋 **Windows、macOS、Linux 與網�
 ## 下載
 | 平台 | 檔案 |
 |---|---|
-| Windows 10/11 x64 | `QuadFight-v1.0.0-windows-x64.zip` |
-| macOS 11 以上（Universal） | `QuadFight-v1.0.0-macos-universal.zip` |
-| Linux x86-64 | `QuadFight-v1.0.0-linux-x86_64.tar.gz` |
-| 網頁版 | `QuadFight-v1.0.0-web.zip` · 線上：<https://jfcc-github.github.io/quadFight/> |
+| Windows 10/11 x64 | `QuadFight-v1.0.1-windows-x64.zip` |
+| macOS 11 以上（Universal） | `QuadFight-v1.0.1-macos-universal.zip` |
+| Linux x86-64 | `QuadFight-v1.0.1-linux-x86_64.tar.gz` |
+| 網頁版 | `QuadFight-v1.0.1-web.zip` · 線上：<https://jfcc-github.github.io/quadFight/> |
 | 校驗碼 | `SHA256SUMS.txt` |
 
 ## 安裝未簽章的版本
 - **Windows：** SmartScreen → **其他資訊** → **仍要執行**。
 - **macOS：** 對 App 按右鍵 →「打開」；若顯示「已損毀」，執行 `xattr -dr com.apple.quarantine /Applications/QuadFight.app`。
-- **Linux：** `tar xzf QuadFight-v1.0.0-linux-x86_64.tar.gz && ./QuadFight.x86_64`（必要時先 `chmod +x`）。
+- **Linux：** `tar xzf QuadFight-v1.0.1-linux-x86_64.tar.gz && ./QuadFight.x86_64`（必要時先 `chmod +x`）。
 - 以 `sha256sum -c SHA256SUMS.txt` 驗證下載檔（macOS：`shasum -a 256 -c`）。
 
 ## 已知限制
@@ -41,7 +43,7 @@ v1.0.0 是第一個可下載的版本，涵蓋 **Windows、macOS、Linux 與網�
 - Linux 需要支援 OpenGL 3.3 的顯示卡與驅動程式。尚無 Windows／Linux 的 ARM 版本。
 
 ## 法律
-MIT License（見 `LICENSE`）；Godot 引擎與字型依各自授權（見 `THIRD_PARTY_NOTICES.zh-TW.md` 與 `licenses/`）。
+PolyForm Noncommercial License 1.0.0（見 `LICENSE`）；Godot 引擎與字型依各自授權（見 `THIRD_PARTY_NOTICES.zh-TW.md` 與 `licenses/`）。
 不蒐集任何資料（見 `PRIVACY.zh-TW.md`）。「Tetris」為其權利人的商標；QuadFight 為獨立、免費、非營利的專案，與其無關聯。
 
 回報問題：<https://github.com/JFCC-GITHUB/quadFight/issues>

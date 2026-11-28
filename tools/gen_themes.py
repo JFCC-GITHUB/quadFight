@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The fighter themes (original, MIT licensed): assets/music/theme_<fighter>.ogg, seamless loops.
+"""The fighter themes (original; PolyForm Noncommercial licensed): assets/music/theme_<fighter>.ogg, seamless loops.
 
 Played while you fight that fighter in the TOURNAMENT. Built from the voices and helpers of gen_music.py.
 Usage:  python3 tools/gen_themes.py [fighter ...]

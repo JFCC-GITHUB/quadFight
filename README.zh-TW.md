@@ -97,13 +97,13 @@ godot --headless --export-release "Web"             build/web/index.html
 [RELEASE_NOTES.zh-TW.md](RELEASE_NOTES.zh-TW.md) · [CHANGELOG.zh-TW.md](CHANGELOG.zh-TW.md)
 
 ## 法律聲明
-- **授權：** 程式碼、自製美術與音樂採用 [MIT License](LICENSE)（中文參考譯本：[LICENSE.zh-TW.md](LICENSE.zh-TW.md)；若有歧異以英文版為準）。
+- **授權：** 程式碼、自製美術與音樂採用 [PolyForm Noncommercial License 1.0.0](LICENSE)：任何非商業用途（遊玩、學習、興趣、教育、公益）皆免費；**商業使用需取得作者書面許可**。屬於「原始碼公開」而非 OSI 定義的「開放原始碼」。繁體中文白話摘要：[LICENSE.zh-TW.md](LICENSE.zh-TW.md)（以英文原文為準）。第三方部分仍依各自授權（見下）。v1.0.0 以 MIT 授權發行，該版本仍可依 MIT 使用；v1.0.1 起改採 PolyForm Noncommercial。
 - **第三方元件**（Godot 引擎、字型）：見 [THIRD_PARTY_NOTICES.zh-TW.md](THIRD_PARTY_NOTICES.zh-TW.md) 與 `licenses/godot/`。
 - **隱私：** 不蒐集、也不傳送任何資料，見 [PRIVACY.zh-TW.md](PRIVACY.zh-TW.md)。
 - **免責聲明：** 本軟體依「現狀」（AS IS）提供，不附任何形式的保證（詳見授權條款）。未簽章的執行檔請自行斟酌使用。
 - **商標：** 「Tetris」為其權利人的註冊商標；QuadFight 為獨立作品，與 The Tetris Company、Tetris Holding 或任何其他遊戲發行商均無關聯。
   其他產品名稱（Godot、Windows、macOS、Linux、iOS、Safari 等）屬各自權利人所有，僅用於說明相容性。
-- **貢獻：** 歡迎以 Pull Request 貢獻；提交即表示你同意以 MIT 授權釋出。請勿加入第三方商標、抄襲的美術、音樂或旋律。
+- **貢獻：** 歡迎以 Pull Request 貢獻；提交即表示你同意以相同的 PolyForm Noncommercial 授權釋出，並允許作者另行再授權（例如商業授權）。請勿加入第三方商標、抄襲的美術、音樂或旋律。
 
 ---
 Made in Taiwan 🇹🇼 · 台灣製作 🇹🇼

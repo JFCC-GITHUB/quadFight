@@ -4,6 +4,12 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] – 2026-11-28
+### Changed
+- **Licence changed from MIT to the PolyForm Noncommercial License 1.0.0**: free for non-commercial use, commercial use needs the author's written permission.
+  v1.0.0 was published under MIT and remains available under MIT. Third-party components keep their own licences.
+- Updated README, third-party notices, licence summary (`LICENSE.zh-TW.md`), contribution terms, file metadata.
+
 ## [1.0.0] – 2026-11-28
 First public release. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
@@ -22,7 +28,7 @@ First public release. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
 - README split into English (`README.md`) and Traditional Chinese (`README.zh-TW.md`).
 
 ### Legal
-- MIT License; free, non-commercial; no third-party trademarks, art or audio.
+- MIT License (superseded by PolyForm Noncommercial from v1.0.1); free, non-commercial; no third-party trademarks, art or audio.
 
 ---
 Made in Taiwan 🇹🇼 · 台灣製作 🇹🇼
