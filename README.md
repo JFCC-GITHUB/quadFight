@@ -1,65 +1,115 @@
-# QuadFight
+# QuadFight 🇹🇼
+
+<img src="docs/flag-tw.svg" width="48" alt="Flag of Taiwan"> **English** · [繁體中文](README.zh-TW.md)
 
 > **Free, non-commercial hobby project.** QuadFight is a personal project made for fun and for the author's own play.
 > It is free: no ads, no in-app purchases, no donations, nothing is sold, and no money is made from it.
 > It is an independent work and is not affiliated with, endorsed by, or sponsored by any other game or company.
->
-> **免費、非營利的個人興趣專案。** QuadFight 是作者為了好玩、自己遊玩而做的作品：完全免費，沒有廣告、
-> 沒有內購、沒有收款或贊助，也不從中獲利。本專案為獨立作品，與任何其他遊戲或公司沒有關聯，也未獲其背書或贊助。
 
-Godot 4.7 單人落塊益智遊戲。起始畫面、分數、本機排行榜，支援鍵盤／手把／觸控。
+A single-player falling-block puzzle game made with Godot 4.7: title screen, scores, local leaderboard,
+a VS-CPU mode with 12 fighters and special attacks, and 2-player versus. Keyboard, gamepad and touch controls.
 
-## 操作
-| | 鍵盤 | 手把 | 觸控 |
+**Play now in the browser:** <https://jfcc-github.github.io/quadFight/>
+
+## Downloads
+
+Get the latest build from the [Releases page](https://github.com/JFCC-GITHUB/quadFight/releases/latest).
+
+| Platform | File | How to run |
+|---|---|---|
+| Windows 10/11 (64-bit) | `QuadFight-<version>-windows-x64.zip` | Unzip, double-click `QuadFight.exe` |
+| macOS 11+ (Apple Silicon & Intel) | `QuadFight-<version>-macos-universal.zip` | Unzip, move `QuadFight.app` to Applications, open it (see below) |
+| Linux (x86-64) | `QuadFight-<version>-linux-x86_64.tar.gz` | `tar xzf …`, then `./QuadFight.x86_64` |
+| Web (any modern browser, iOS Safari too) | `QuadFight-<version>-web.zip` or the link above | Host the folder over HTTP, or just use the live link |
+
+Each archive contains the game plus `LICENSE`, `THIRD_PARTY_NOTICES.md`, `PRIVACY.md` and the Godot licence texts.
+
+### The builds are not code-signed
+Code-signing certificates cost money and this is a free hobby project, so the Windows and macOS builds are **unsigned**.
+Your system will warn you the first time. The game contains no network code and collects no data (see [PRIVACY.md](PRIVACY.md)).
+You can check that a download is the one published by the author with `SHA256SUMS.txt` (attached to every release):
+
+```
+sha256sum -c SHA256SUMS.txt          # Linux / macOS: shasum -a 256 -c SHA256SUMS.txt
+Get-FileHash QuadFight-*.zip         # Windows PowerShell, compare with the file
+```
+
+- **Windows (SmartScreen):** "Windows protected your PC" → **More info** → **Run anyway**.
+- **macOS (Gatekeeper):** right-click `QuadFight.app` → **Open** → **Open**. If macOS says the app is "damaged", run
+  `xattr -dr com.apple.quarantine /Applications/QuadFight.app` once in Terminal.
+- **Linux:** if it does not start, `chmod +x QuadFight.x86_64`. Needs a GPU/driver with OpenGL 3.3 (GL Compatibility renderer).
+
+## Controls
+| | Keyboard | Gamepad | Touch |
 |---|---|---|---|
-| 左右移動 | ← → / A D | 十字鍵／左搖桿 | `<` `>` |
-| 軟降 | ↓ / S | 十字鍵下 | `v` |
-| 旋轉 | ↑ X / Z | A / B | ROTATE |
-| 硬降 | Space | 十字鍵上 / Y | DROP |
-| 暫存 | C / Shift | X | HOLD |
-| 暫停 | P / Esc | Start | 右上角 ⏸ |
+| Move left / right | ← → / A D | D-pad / left stick | `<` `>` |
+| Soft drop | ↓ / S | D-pad down | `v` |
+| Rotate | ↑ X / Z | A / B | ROTATE |
+| Hard drop | Space | D-pad up / Y | DROP |
+| Hold | C / Shift | X | HOLD |
+| Pause | P / Esc | Start | ⏸ top right |
 
-## 遊戲模式
-- **PLAY**：單人無盡模式，有排行榜
-- **VS CPU**：與電腦對戰（Lv 1–20，電腦像人一樣有延遲、思考和失誤），先被堆到頂的人輸；12 位角色各有絕招，可打天梯或錦標賽
-  - 電腦等級 = 反應速度、移動速度、失誤率（Lv1 約 28% 的方塊會放錯、動作慢；Lv10 幾乎不失誤、約人類高手的速度）
-  - 消行會攻擊對手：一次消 1 行約掉 1–2 格、2 行 3–4 格、3 行 5–7 格、4 行 8–10 格（連續消行每多一次再 +1，最多 10 格），灰色方格會隨機落在對手的各欄位
-  - 你消行時，會先抵銷你自己還沒落下的待受攻擊方格，剩下的才送給對手
-  - 待落下的方格會顯示在「INCOMING」與棋盤左側的紅色警示條；對手下次落地沒有消行時才會掉下來
-  - 每個等級會記錄你的勝敗
+Keys are rebindable in OPTIONS → KEYS.
 
-## 選項（標題畫面或暫停選單 → OPTIONS）
-- **COLORS**：方塊配色 4 種（Candy / Neon / Pastel / Colorblind）、背景 3 種（Nebula / Midnight / Sunset）
-- **SOUND**：音效、音樂各自的開關與音量；音效風格 2 種（Arcade / Soft & Relaxed 柔和）；音樂風格 7 種（Super Robot 熱血機器人動畫風〔預設〕/ Chiptune / Synthwave / Chill / Lo-fi Cafe / Bossa Breeze / Music Box），按箭頭即可試聽
-- **CONTROLS**：觸控版型（Classic / Thumbs，後者多一顆逆時針旋轉）、移動按鈕放左手或右手、長按移動速度、落點預覽開關，附即時預覽
-- 設定會存在瀏覽器儲存空間，下次開啟自動套用
+## Game modes
+- **PLAY** – endless single-player with a local leaderboard.
+- **VS CPU** – play against the computer (Lv 1–20; it has input lag, thinks, and makes mistakes like a person). The first to top out loses.
+  12 fighters, each with a special attack. Play a **LADDER** (one opponent, level goes up per win) or a **TOURNAMENT**
+  (5 random fighters, then a "dark" copy of your own fighter as the boss; continues; bonus car-smashing stage).
+  - CPU level = reaction speed, movement speed, mistake rate (Lv 1: ~28 % of pieces misplaced, slow; Lv 10: almost no mistakes, strong human speed; Lv 20: top human).
+  - Clearing lines attacks the opponent: 1 line ≈ 1–2 garbage cells, 2 ≈ 3–4, 3 ≈ 5–7, 4 ≈ 8–10 (each extra combo +1, max 10); grey cells land at random columns.
+  - Your clears first cancel your own incoming garbage; the rest is sent to the opponent. Incoming garbage is shown in INCOMING and by a red bar beside the board.
+  - Your win/loss record is kept per level.
+- **PRACTICE** – one unrecorded fight against a chosen opponent; rematch from the result card.
+- **2 PLAYERS** – local versus on one computer (two keyboards halves / two gamepads) or on a tablet (two sets of touch buttons).
 
-## 美術素材
-- `tools/gen_assets.py` 用 Python（Pillow + numpy）生成方塊材質、背景、Logo、按鈕圖示，輸出到 `assets/`。改顏色或形狀後重跑：`python3 tools/gen_assets.py`
-- 字型：Russo One、Rajdhani（Google Fonts，SIL Open Font License，授權檔在 `assets/fonts/`）
-- 介面配色與繪圖輔助集中在 `scripts/style.gd`
+## Options (title screen or pause menu → OPTIONS)
+- **COLORS** – 4 block themes (Candy / Neon / Pastel / Colorblind), 3 backgrounds (Nebula / Midnight / Sunset).
+- **SOUND** – separate on/off and volume for sound and music; 2 sound styles (Arcade / Soft & Relaxed); 7 original music styles
+  (Super Robot [default] / Chiptune / Synthwave / Chill / Lo-fi Cafe / Bossa Breeze / Music Box).
+- **CONTROLS / KEYS** – touch layout (Classic / Thumbs), hand swap, key-repeat speed, ghost piece, key bindings.
+- Settings are saved locally (browser storage on the web) and applied on the next start.
 
-## 音樂
-音樂全部是原創曲，由 `tools/gen_music.py` 用 Python（numpy + soundfile）合成並輸出成可無縫循環的 OGG 到 `assets/music/`。
-想改曲或加新風格：編輯該腳本裡的樂譜／風格函式，執行 `python3 tools/gen_music.py`。
-Super Robot 風格只是參考 70–80 年代日本超級機器人動畫主題曲的整體氛圍（熱血銅管、搖滾鼓組），沒有重現任何現有歌曲。
+## Art and music
+- Visual assets are generated by Python scripts in `tools/` (Pillow + numpy) into `assets/`: `gen_assets.py` (blocks, backgrounds, logo, icons),
+  `gen_fighters.py`, `gen_fx.py`, `gen_car.py`. Re-run, then `godot --headless --import`.
+- Fonts: Russo One and Rajdhani (Google Fonts, SIL Open Font License; licence texts in `assets/fonts/`).
+- Music is entirely original, synthesized by `tools/gen_music.py` / `tools/gen_themes.py` (numpy + soundfile) into seamless OGG loops.
+  The Super Robot style only borrows the general mood of 1970s–80s Japanese super-robot anime themes; it does not reproduce any existing song.
 
-## 本機開發
-用 Godot 4.7 開啟專案資料夾，按 F5。
+## Build from source
+Open the folder with **Godot 4.7** and press F5. Export presets for Web, Windows Desktop, Linux and macOS are in `export_presets.cfg`:
 
-## 部署到 GitHub Pages（iOS 試玩）
-1. 合併到 `main`（workflow 只在 main 觸發，也可在 Actions 頁手動 Run workflow）
-2. Repo → Settings → Pages → Source 選 **GitHub Actions**
-3. 網址：`https://<帳號>.github.io/quadFight/`
-4. iOS Safari 開啟後「分享 → 加入主畫面」可全螢幕遊玩，排行榜存在瀏覽器儲存空間。
+```
+godot --headless --import
+godot --headless --export-release "Linux"           build/linux/QuadFight.x86_64
+godot --headless --export-release "Windows Desktop" build/windows/QuadFight.exe
+godot --headless --export-release "macOS"           build/macos/QuadFight.zip
+godot --headless --export-release "Web"             build/web/index.html
+```
 
-## 結構
-- `scripts/game.gd` 遊戲核心（SRS 旋轉、7-bag、hold、ghost、DAS/ARR、鎖定延遲）
-- `scripts/pieces.gd` 方塊與踢牆資料
-- `scripts/scores.gd` 排行榜（autoload）
-- `scripts/title.gd` / `leaderboard.gd` / `main.gd` 畫面與輸入設定
+Releases are built by GitHub Actions: pushing a tag `v*` runs `.github/workflows/release.yml`, which exports all four platforms,
+writes `SHA256SUMS.txt` and publishes a GitHub Release using `RELEASE_NOTES.md`. Merging to `main` redeploys the web build to GitHub Pages
+(Settings → Pages → Source: **GitHub Actions**).
 
-## 授權
-- 程式碼與自製美術：MIT License，見 `LICENSE`
-- 第三方（Godot、字型等）：見 `THIRD_PARTY_NOTICES.md`
-- 「Tetris」為其權利人的註冊商標；本專案為獨立作品，與其無關聯。本專案為免費的個人興趣專案，不營利
+## Project layout
+- `scripts/game.gd` – game core (SRS rotation, 7-bag, hold, ghost, DAS/ARR, lock delay); `scripts/pieces.gd` – pieces and kick data
+- `scripts/cpu_player.gd`, `characters.gd` – CPU opponent and the 12 fighters
+- `scripts/scores.gd`, `settings.gd` – local leaderboard and options (autoloads)
+- `scripts/title.gd`, `main.gd`, … – screens and input setup
+
+## Release notes and changelog
+[RELEASE_NOTES.md](RELEASE_NOTES.md) · [CHANGELOG.md](CHANGELOG.md)
+
+## Legal
+- **License:** the code and the generated art and music are under the [MIT License](LICENSE) (courtesy translation: [LICENSE.zh-TW.md](LICENSE.zh-TW.md); the English text is the binding one).
+- **Third-party components** (Godot Engine, fonts): see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/godot/`.
+- **Privacy:** no data is collected or sent anywhere. See [PRIVACY.md](PRIVACY.md).
+- **Disclaimer:** the software is provided "AS IS", without warranty of any kind (see the licence). Unsigned binaries are used at your own discretion.
+- **Trademarks:** "Tetris" is a registered trademark of its owner. QuadFight is an independent work with no affiliation to The Tetris Company, Tetris Holding or any other game publisher.
+  Other product names (Godot, Windows, macOS, Linux, iOS, Safari, …) belong to their owners and are used only to describe compatibility.
+- **Contributing:** contributions are welcome via pull request; by submitting one you agree to license it under the MIT License.
+  Do not add third-party trademarks, copied art, music or melodies.
+
+---
+Made in Taiwan 🇹🇼 · 台灣製作 🇹🇼
