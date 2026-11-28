@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compose and render QuadFight's background music (all original, MIT licensed).
+"""Compose and render QuadFight's background music (all original; PolyForm Noncommercial licensed).
 
 Usage:  python3 tools/gen_music.py        (needs numpy + soundfile)
 Writes assets/music/<style>.ogg (seamless loops) and assets/music/styles.json.

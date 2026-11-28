@@ -2,7 +2,7 @@
 
 **English** · [繁體中文](PRIVACY.zh-TW.md)
 
-_Last updated: 2026-11-28 (v1.0.0)_
+_Last updated: 2026-11-28 (v1.0.1)_
 
 QuadFight is a free, non-commercial hobby game. **It does not collect, transmit, sell or share any personal data.**
 

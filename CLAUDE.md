@@ -130,6 +130,6 @@ plays one instead of the chosen style (used by TOURNAMENT fights, `game.gd`).
   `RELEASE_NOTES.md` + `RELEASE_NOTES.zh-TW.md`. "Run workflow" without a tag is a dry run (artifacts only).
 - To release: update `CHANGELOG*`, `RELEASE_NOTES*` (version, date, downloads) and `PRIVACY*` date, merge, then tag.
 - Every user-facing document exists in English and Traditional Chinese (`X.md` + `X.zh-TW.md`, language switcher on the first line, 🇹🇼 in the
-  title, "Made in Taiwan 🇹🇼 · 台灣製作 🇹🇼" footer; keep the plain MIT `LICENSE` text unchanged). Update both when one changes.
-- Legal: MIT + `THIRD_PARTY_NOTICES*` (Godot texts in `licenses/godot/`), `PRIVACY*` (no network code, local data only: re-check if that changes),
+  title, "Made in Taiwan 🇹🇼 · 台灣製作 🇹🇼" footer; keep the official PolyForm `LICENSE` text unchanged). Update both when one changes.
+- Legal: PolyForm Noncommercial 1.0.0 (since v1.0.1; v1.0.0 was MIT) + `THIRD_PARTY_NOTICES*` (Godot texts in `licenses/godot/`), `PRIVACY*` (no network code, local data only: re-check if that changes),
   "Tetris" trademark disclaimer. No third-party trademarks, art, audio or melodies.

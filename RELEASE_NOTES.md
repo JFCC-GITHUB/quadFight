@@ -1,11 +1,13 @@
-# QuadFight v1.0.0 – Release Notes 🇹🇼
+# QuadFight v1.0.1 – Release Notes 🇹🇼
 
 **English** · [繁體中文](RELEASE_NOTES.zh-TW.md)
 
-_Released 2026-11-28 · first public release_
+_Released 2026-11-28 · first full multi-platform release_
+
+> **Licence change:** from v1.0.1 QuadFight is under the **PolyForm Noncommercial License 1.0.0** (free for any non-commercial use; commercial use needs the author's permission). v1.0.0 was published under MIT and remains available under MIT. No game changes.
 
 QuadFight is a free, non-commercial falling-block puzzle game with a CPU that plays like a person, 12 fighters with
-special attacks, and local 2-player versus. v1.0.0 is the first release you can download for **Windows, macOS, Linux and the Web**.
+special attacks, and local 2-player versus. v1.0.1 is the first release you can download for **Windows, macOS, Linux and the Web**.
 
 ## Highlights
 - **Now on four platforms:** Windows 10/11 (x64), macOS 11+ (universal: Apple Silicon + Intel), Linux (x86-64) and the Web (also on iOS Safari). New app icon.
@@ -22,16 +24,16 @@ special attacks, and local 2-player versus. v1.0.0 is the first release you can 
 ## Downloads
 | Platform | File |
 |---|---|
-| Windows 10/11 x64 | `QuadFight-v1.0.0-windows-x64.zip` |
-| macOS 11+ (universal) | `QuadFight-v1.0.0-macos-universal.zip` |
-| Linux x86-64 | `QuadFight-v1.0.0-linux-x86_64.tar.gz` |
-| Web | `QuadFight-v1.0.0-web.zip` · live: <https://jfcc-github.github.io/quadFight/> |
+| Windows 10/11 x64 | `QuadFight-v1.0.1-windows-x64.zip` |
+| macOS 11+ (universal) | `QuadFight-v1.0.1-macos-universal.zip` |
+| Linux x86-64 | `QuadFight-v1.0.1-linux-x86_64.tar.gz` |
+| Web | `QuadFight-v1.0.1-web.zip` · live: <https://jfcc-github.github.io/quadFight/> |
 | Checksums | `SHA256SUMS.txt` |
 
 ## Installing the unsigned builds
 - **Windows:** SmartScreen → **More info** → **Run anyway**.
 - **macOS:** right-click the app → **Open**; if it says "damaged", run `xattr -dr com.apple.quarantine /Applications/QuadFight.app`.
-- **Linux:** `tar xzf QuadFight-v1.0.0-linux-x86_64.tar.gz && ./QuadFight.x86_64` (`chmod +x` if needed).
+- **Linux:** `tar xzf QuadFight-v1.0.1-linux-x86_64.tar.gz && ./QuadFight.x86_64` (`chmod +x` if needed).
 - Verify downloads with `sha256sum -c SHA256SUMS.txt` (macOS: `shasum -a 256 -c`).
 
 ## Known limitations
@@ -41,7 +43,7 @@ special attacks, and local 2-player versus. v1.0.0 is the first release you can 
 - Linux needs a GPU/driver with OpenGL 3.3. No ARM builds for Windows/Linux yet.
 
 ## Legal
-MIT License (see `LICENSE`); Godot Engine and fonts under their own licences (see `THIRD_PARTY_NOTICES.md` and `licenses/`).
+PolyForm Noncommercial License 1.0.0 (see `LICENSE`); Godot Engine and fonts under their own licences (see `THIRD_PARTY_NOTICES.md` and `licenses/`).
 No data is collected (see `PRIVACY.md`). "Tetris" is a trademark of its owner; QuadFight is an independent, free, non-commercial project with no affiliation.
 
 Report bugs: <https://github.com/JFCC-GITHUB/quadFight/issues>
