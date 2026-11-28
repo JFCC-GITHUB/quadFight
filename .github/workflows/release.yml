@@ -1,0 +1,105 @@
+name: Release builds
+
+# Push a tag like v1.0.0 to build Windows / macOS / Linux / Web archives and publish a GitHub Release.
+# "Run workflow" (workflow_dispatch) builds the archives as a dry run and uploads them as workflow
+# artifacts only: no release is created.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    env:
+      VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('dev-{0}', github.sha) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup export templates
+        run: |
+          set -e
+          SRC=/root/.local/share/godot/export_templates
+          DST="$HOME/.local/share/godot/export_templates"
+          mkdir -p "$DST"
+          cp -r "$SRC"/. "$DST"/
+          godot --version
+          which zip tar || (apt-get update && apt-get install -y zip)
+      - name: Import project
+        run: godot --headless --import || true
+      - name: Export all platforms
+        run: |
+          set -e
+          mkdir -v -p build/web build/windows build/linux build/macos
+          godot --headless --export-release "Web"             build/web/index.html
+          godot --headless --export-release "Windows Desktop" build/windows/QuadFight.exe
+          godot --headless --export-release "Linux"           build/linux/QuadFight.x86_64
+          godot --headless --export-release "macOS"           build/macos/QuadFight.zip
+          ls -la build/*
+      - name: Package archives
+        run: |
+          set -e
+          VER="${VERSION}"
+          mkdir -p dist
+          docs() {  # copy the legal + bilingual docs into a package folder
+            cp LICENSE LICENSE.zh-TW.md THIRD_PARTY_NOTICES.md THIRD_PARTY_NOTICES.zh-TW.md \
+               PRIVACY.md PRIVACY.zh-TW.md README.md README.zh-TW.md \
+               RELEASE_NOTES.md RELEASE_NOTES.zh-TW.md CHANGELOG.md CHANGELOG.zh-TW.md "$1"/
+            cp -r licenses "$1"/licenses
+            mkdir -p "$1"/docs && cp docs/flag-tw.svg "$1"/docs/
+          }
+          pack() {  # pack <suffix> <source dir> <zip|tgz>
+            name="QuadFight-${VER}-$1"
+            rm -rf "pkg/$name"; mkdir -p "pkg/$name"
+            cp -r "$2"/. "pkg/$name"/
+            docs "pkg/$name"
+            if [ "$3" = tgz ]; then
+              tar -C pkg -czf "dist/$name.tar.gz" "$name"
+            else
+              (cd pkg && zip -qr "../dist/$name.zip" "$name")
+            fi
+          }
+          pack web build/web zip
+          pack windows-x64 build/windows zip
+          chmod +x build/linux/QuadFight.x86_64
+          pack linux-x86_64 build/linux tgz
+          mkdir -p build/macos_app && unzip -q build/macos/QuadFight.zip -d build/macos_app
+          pack macos-universal build/macos_app zip
+          # Release body = English notes, then Traditional Chinese notes
+          { cat RELEASE_NOTES.md; printf '\n\n---\n\n'; cat RELEASE_NOTES.zh-TW.md; } > dist/RELEASE_BODY.md
+          (cd dist && sha256sum QuadFight-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          ls -la dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quadfight-${{ env.VERSION }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    # Tag pushes only
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          ls -la dist
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "QuadFight $TAG 🇹🇼" \
+            --notes-file dist/RELEASE_BODY.md \
+            dist/QuadFight-*.zip dist/QuadFight-*.tar.gz dist/SHA256SUMS.txt

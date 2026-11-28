@@ -120,3 +120,16 @@ plays one instead of the chosen style (used by TOURNAMENT fights, `game.gd`).
 - Visual check: `--export-release "Web" build/web/index.html`, serve with
   `python3 -m http.server`, screenshot with Playwright (Chromium needs
   `--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`), and look at it.
+
+## Release (desktop + web builds, bilingual docs)
+- Export presets in `export_presets.cfg`: `Web`, `Windows Desktop`, `Linux`, `macOS` (unsigned; ETC2/ASTC import must stay on in
+  `project.godot` for the universal mac export; bundle id may not contain `_`). App icon = `make_app_icon()` in `tools/gen_assets.py`
+  (`assets/icon.ico|icns|_1024.png`).
+- Pushing a tag `v*` runs `.github/workflows/release.yml`: exports all four, packs `QuadFight-<tag>-{windows-x64,macos-universal,web}.zip` +
+  `linux-x86_64.tar.gz` (each with the legal docs + `licenses/`), writes `SHA256SUMS.txt` and publishes a GitHub Release whose body is
+  `RELEASE_NOTES.md` + `RELEASE_NOTES.zh-TW.md`. "Run workflow" without a tag is a dry run (artifacts only).
+- To release: update `CHANGELOG*`, `RELEASE_NOTES*` (version, date, downloads) and `PRIVACY*` date, merge, then tag.
+- Every user-facing document exists in English and Traditional Chinese (`X.md` + `X.zh-TW.md`, language switcher on the first line, 🇹🇼 in the
+  title, "Made in Taiwan 🇹🇼 · 台灣製作 🇹🇼" footer; keep the plain MIT `LICENSE` text unchanged). Update both when one changes.
+- Legal: MIT + `THIRD_PARTY_NOTICES*` (Godot texts in `licenses/godot/`), `PRIVACY*` (no network code, local data only: re-check if that changes),
+  "Tetris" trademark disclaimer. No third-party trademarks, art, audio or melodies.

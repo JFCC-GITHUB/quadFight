@@ -345,6 +345,26 @@ def make_icons():
     make_fullscreen_icons()
 
 
+def make_app_icon():
+    """App icon (window / .exe / .app): the icon.svg block layout, bevelled blocks on a dark tile.
+    Writes assets/icon_1024.png, assets/icon.ico (16-256) and assets/icon.icns."""
+    S = 1024
+    base = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    tile = Image.new("RGBA", (S, S), (13, 16, 32, 255))
+    base.paste(tile, (0, 0), rounded_mask((S, S), (0, 0, S, S), 190))
+    cell = round(S * 26 / 128)
+    off = (S - 3 * cell) // 2
+    layout = {(0, 0): "00e5ff", (1, 0): "00e5ff", (2, 0): "00e5ff",
+              (1, 1): "b84dff", (2, 1): "ff9a1f",
+              (0, 2): "ffd400", (1, 2): "ff5a5a", (2, 2): "37e05a"}
+    for (cx, cy), col in layout.items():
+        base.alpha_composite(make_block(col, size=cell), (off + cx * cell, off + cy * cell))
+    base.save(os.path.join(ASSETS, "icon_1024.png"))
+    base.save(os.path.join(ASSETS, "icon.ico"),
+              sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    base.save(os.path.join(ASSETS, "icon.icns"))
+
+
 def make_fullscreen_icons():
     for name, out in (("fullscreen", False), ("fullscreen_exit", True)):
         ic = Icon()
@@ -385,6 +405,7 @@ def main():
     make_logo().save(os.path.join(ASSETS, "logo.png"))
     make_icons()
     make_knob()
+    make_app_icon()
     with open(os.path.join(ASSETS, "themes.json"), "w") as f:
         json.dump({"themes": THEMES,
                    "backgrounds": [{"id": b["id"], "name": b["name"]} for b in BACKGROUNDS]},

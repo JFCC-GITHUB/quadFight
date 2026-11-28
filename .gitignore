@@ -4,3 +4,5 @@ build/
 .import/
 export_credentials.cfg
 __pycache__/
+pkg/
+dist/
